@@ -1,5 +1,5 @@
 class EscolaModelo {
-  String id;
+  String idEscola;
   String bairro;
   String cep;
   String cidade;
@@ -10,7 +10,7 @@ class EscolaModelo {
   String numeroRegistro;
 
   EscolaModelo({
-    required this.id,
+    required this.idEscola,
     required this.bairro,
     required this.cep,
     required this.cidade,

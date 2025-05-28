@@ -26,6 +26,7 @@ class ItemMenu extends StatelessWidget {
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> destino));
           },
           title: TextoPadrao(
+            negrito: true,
             texto: texto,
             corTexto: Cores.corPrincipal,
             tamanhoTexto: largura*0.01,

@@ -10,6 +10,7 @@ class InputPadrao extends StatelessWidget {
   bool oculto;
   TextInputType textInputType;
   List<TextInputFormatter>? inputFormatters = [];
+  int maximoCaracteres;
 
   InputPadrao({
     required this.controller,
@@ -18,6 +19,7 @@ class InputPadrao extends StatelessWidget {
     this.oculto = false,
     this.textInputType = TextInputType.text,
     List<TextInputFormatter>? inputFormatters,
+    this.maximoCaracteres = 0,
   })
     : inputFormatters = inputFormatters ?? [];
 
@@ -39,7 +41,9 @@ class InputPadrao extends StatelessWidget {
             obscureText: oculto,
             keyboardType: textInputType,
             inputFormatters: inputFormatters,
+            maxLength: maximoCaracteres==0?null:maximoCaracteres,
             decoration: InputDecoration(
+              counterText: '',
               border: InputBorder.none,
             ),
           ),

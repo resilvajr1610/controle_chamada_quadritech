@@ -21,23 +21,23 @@ class MenuWeb extends StatelessWidget {
           children: [
             LogoHome(),
             ItemMenu(
-              texto: 'Escolas',
+              texto: 'ESCOLAS',
               destino: CadastroEscolasTela(),
             ),
             ItemMenu(
-              texto: 'Professores',
-              destino: CadastroProfessoresTela(),
-            ),
-            ItemMenu(
-              texto: 'Alunos',
-              destino: CadastroAlunosTela(),
-            ),
-            ItemMenu(
-              texto: 'Disciplinas',
+              texto: 'DISCIPLINAS',
               destino: CadastroDisciplinasTela(),
             ),
             ItemMenu(
-              texto: 'Sair',
+              texto: 'PROFESSORES',
+              destino: CadastroProfessoresTela(),
+            ),
+            ItemMenu(
+              texto: 'ALUNOS',
+              destino: CadastroAlunosTela(),
+            ),
+            ItemMenu(
+              texto: 'SAIR',
               destino: LoginTela(),
             ),
           ],

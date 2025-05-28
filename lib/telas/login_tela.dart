@@ -4,6 +4,8 @@ import 'package:controle_chamada_quadritech/widgets/botao_padrao.dart';
 import 'package:controle_chamada_quadritech/widgets/input_padrao.dart';
 import 'package:flutter/material.dart';
 
+import '../widgets/snackbar.dart';
+
 class LoginTela extends StatefulWidget {
   const LoginTela({super.key});
 
@@ -22,8 +24,14 @@ class _LoginTelaState extends State<LoginTela> {
     setState(() {});
   }
 
+  //login teste
+  //senha teste123
   fazerLogin(){
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>HomeTela()));
+    if(email.text=='teste' && senha.text == 'teste123'){
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>HomeTela()));
+    }else{
+      showSnackBar(context, 'E-mail e/ou senha incorreto(s)', Cores.erro);
+    }
   }
 
   @override

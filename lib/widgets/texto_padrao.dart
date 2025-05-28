@@ -5,20 +5,22 @@ class TextoPadrao extends StatelessWidget {
  Color corTexto;
  double tamanhoTexto;
  bool negrito;
+ TextAlign textAling;
 
 
  TextoPadrao({
    required this.texto,
    this.corTexto = Colors.white,
    this.tamanhoTexto = 20.0,
-   this.negrito = false
+   this.negrito = false,
+   this.textAling = TextAlign.center
 });
 
   @override
   Widget build(BuildContext context) {
     return Text(
       texto,
-      textAlign: TextAlign.center,
+      textAlign: textAling,
       style: TextStyle(
         color: corTexto,
         fontSize: tamanhoTexto,

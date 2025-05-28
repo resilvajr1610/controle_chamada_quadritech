@@ -29,9 +29,9 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
   TextEditingController ensino = TextEditingController();
   TextEditingController pesquisar = TextEditingController();
   bool salvando = false;
-  bool novoCadastro = false;
+  bool exibirCampos = false;
   List<EscolaModelo> escolasLista = [];
-
+  String idEscola = '';
   verificarCampos(){
     if(nome.text.length>2){
       if(endereco.text.length>2){
@@ -40,7 +40,7 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
             if(cidade.text.length>2){
               if(cep.text.length==10){
                 if(ensino.text.length>2){
-                  salvarEscola();
+                  idEscola.isEmpty?salvarEscola():editarEscola();
                 }else{
                   showSnackBar(context, 'Ensino Incompleto', Cores.erro);
                 }
@@ -79,6 +79,7 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
       'cep'             : cep.text,
       'numeroRegistro'  : numeroRegistro.text,
       'ensino'          : ensino.text.toUpperCase(),
+      'status'          : 'ativo'
     }).then((_){
       nome.clear();
       endereco.clear();
@@ -94,19 +95,69 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
     });
   }
 
+  editarEscola(){
+    FirebaseFirestore.instance.collection('escolas').doc(idEscola).update({
+      'nome'            : nome.text.toUpperCase(),
+      'endereco'        : endereco.text.toUpperCase(),
+      'numero'          : int.parse(numero.text),
+      'bairro'          : bairro.text.toUpperCase(),
+      'cidade'          : cidade.text.toUpperCase(),
+      'cep'             : cep.text,
+      'numeroRegistro'  : numeroRegistro.text,
+      'ensino'          : ensino.text.toUpperCase(),
+    }).then((_){
+      nome.clear();
+      endereco.clear();
+      numero.clear();
+      bairro.clear();
+      cidade.clear();
+      cep.clear();
+      numeroRegistro.clear();
+      ensino.clear();
+      salvando = false;
+      idEscola = '';
+      setState(() {});
+      showSnackBar(context, 'Alterado com sucesso', Colors.green);
+    });
+  }
+
+  apagarEscola(){
+    FirebaseFirestore.instance.collection('escolas')
+        .doc(idEscola)
+        .update({
+          'status' : 'inativo'
+        }).then((_){
+          nome.clear();
+          endereco.clear();
+          numero.clear();
+          bairro.clear();
+          cidade.clear();
+          cep.clear();
+          numeroRegistro.clear();
+          ensino.clear();
+          salvando = false;
+          idEscola = '';
+          Navigator.pop(context);
+          setState(() {});
+          showSnackBar(context, 'Excluído com sucesso', Colors.green);
+    });
+  }
+
   pesquisarEscola(){
     escolasLista.clear();
-    novoCadastro = false;
+    exibirCampos = false;
+    idEscola = '';
     if(pesquisar.text.length>2){
       FirebaseFirestore.instance.collection('escolas')
           .orderBy('nome')
+          .where('status',isNotEqualTo: 'inativo')
           .startAt([pesquisar.text.toUpperCase()])
           .endAt(['${pesquisar.text.toUpperCase()}\uf8ff']).get().then((escolasDoc){
 
           for(int i = 0; escolasDoc.docs.length > i;i++){
             escolasLista.add(
               EscolaModelo(
-                id: escolasDoc.docs[i].id,
+                idEscola: escolasDoc.docs[i].id,
                 bairro: escolasDoc.docs[i]['bairro'],
                 cep: escolasDoc.docs[i]['cep'],
                 cidade: escolasDoc.docs[i]['cidade'],
@@ -119,11 +170,62 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
             );
           }
           setState(() {});
+          if(escolasLista.isEmpty){
+            showSnackBar(context, 'Nenhuma escola encontrada', Cores.erro);
+          }
       });
     }else{
       showSnackBar(context, 'Digite pelo menos 3 caracteres para pesquisar', Cores.erro);
     }
     setState(() {});
+  }
+
+  preencherCampos(EscolaModelo escola){
+    nome.text = escola.nome;
+    endereco.text = escola.endereco;
+    numero.text = escola.numero.toString();
+    bairro.text = escola.bairro;
+    cidade.text = escola.cidade;
+    cep.text = escola.cep;
+    numeroRegistro.text = escola.numeroRegistro;
+    ensino.text = escola.ensino;
+    idEscola = escola.idEscola;
+    exibirCampos = true;
+    setState(() {});
+  }
+
+  exibirExclusao(){
+    return showDialog(
+        context: context,
+        builder: (context){
+          return AlertDialog(
+            title: TextoPadrao(
+              texto: 'Confirmar Exclusão',
+              corTexto: Cores.erro,
+            ),
+            content: TextoPadrao(
+              texto: 'Deseja confirmar a exclusão da escola?',
+              corTexto: Cores.erro,
+            ),
+            actions: [
+              BotaoPadrao(
+                titulo: 'Cancelar',
+                corBotao: Colors.green,
+                funcao:(){
+                  Navigator.pop(context);
+                }
+              ),
+              BotaoPadrao(
+                titulo: 'Excluir',
+                corBotao: Cores.erro,
+                funcao:(){
+                  apagarEscola();
+                }
+              ),
+            ],
+          );
+        }
+    );
   }
 
   @override
@@ -160,7 +262,7 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
                 children: [
                   InputPadrao(
                     controller: pesquisar,
-                    titulo: 'Pesquisar nome da escola',
+                    titulo: 'Pesquisar pelo nome da escola',
                     largura: 400,
                   ),
                   SizedBox(width: 20,),
@@ -173,11 +275,13 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
                   ),
                   SizedBox(width: 20,),
                   BotaoPadrao(
-                      titulo: novoCadastro?'Fechar':'Cadastrar',
-                      largura: 120,
+                      titulo: exibirCampos?'x':'+',
+                      largura: 50,
                       funcao: (){
                         pesquisar.clear();
-                        novoCadastro = !novoCadastro;
+                        escolasLista.clear();
+                        idEscola = '';
+                        exibirCampos = !exibirCampos;
                         setState(() {});
                       }
                   ),
@@ -185,8 +289,8 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
               ),
             ),
             Spacer(),
-            !novoCadastro?Container(
-              height: 500,
+            !exibirCampos?Container(
+              height: 450,
               width: 500,
               child: ListView.builder(
                 itemCount: escolasLista.length,
@@ -195,9 +299,21 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
                     color: Colors.grey[200],
                     alignment: Alignment.centerLeft,
                     padding: EdgeInsets.symmetric(vertical: 10,horizontal: 30),
-                    child: TextoPadrao(
-                      texto: escolasLista[i].nome,
-                      corTexto: Cores.corPrincipal,
+                    child: ListTile(
+                      title: TextoPadrao(
+                        textAling: TextAlign.start,
+                        texto: escolasLista[i].nome,
+                        corTexto: Cores.corPrincipal,
+                      ),
+                      subtitle: TextoPadrao(
+                        textAling: TextAlign.start,
+                        texto: 'Cidade : ${escolasLista[i].cidade}',
+                        corTexto: Cores.corPrincipal,
+                        tamanhoTexto: 15,
+                      ),
+                      onTap: (){
+                        preencherCampos(escolasLista[i]);
+                      },
                     ),
                   );
                 }
@@ -208,7 +324,7 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
               child: ListView(
                 children: [
                   InputPadrao(
-                    titulo: 'Nome da escola *',
+                    titulo: 'Escola *',
                     controller: nome,
                     largura: 450,
                   ),
@@ -272,11 +388,18 @@ class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
                     largura: 450,
                   ),
                   BotaoPadrao(
-                    titulo: 'Salvar',
+                    titulo: idEscola.isEmpty?'Salvar':'Alterar',
                     funcao: (){
                       verificarCampos();
                     },
-                  )
+                  ),
+                  idEscola.isNotEmpty?BotaoPadrao(
+                    titulo: 'Excluir',
+                    corBotao: Cores.erro,
+                    funcao: (){
+                      exibirExclusao();
+                    },
+                  ):Container()
                 ],
               ),
             ),
