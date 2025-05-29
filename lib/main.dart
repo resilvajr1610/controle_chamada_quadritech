@@ -19,7 +19,7 @@ void main() async {
     MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Quadritech',
-      home: CadastroAlunosTela(),
+      home: LoginTela(),
     )
   );
 }
