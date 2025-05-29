@@ -26,11 +26,13 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
   TextEditingController ano = TextEditingController();
   TextEditingController pesquisar = TextEditingController();
   bool salvando = false;
-  bool novoCadastro = false;
+  bool exibirCampos = false;
   List<DisciplinaModelo> disciplinasLista = [];
   List<EscolaModelo> escolasLista = [];
   EscolaModelo? escolaSelecionadaPesquisa;
   EscolaModelo? escolaSelecionadaCadastro;
+
+  String idDisciplina = '';
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -63,7 +65,7 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
         if(curso.text.length>2){
           if(ano.text.length==4){
             if(ensino.text.length>2){
-              salvarDisciplina();
+              idDisciplina.isEmpty?salvarDisciplina():editarDisciplina();
             }else{
               showSnackBar(context, 'Ensino Incompleto', Cores.erro);
             }
@@ -94,6 +96,7 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
       'curso'         : curso.text.toUpperCase(),
       'ano'           : int.parse(ano.text),
       'ensino'        : ensino.text.toUpperCase(),
+      'status'          : 'ativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
       nome.clear();
@@ -106,9 +109,33 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
     });
   }
 
+  editarDisciplina(){
+    salvando = true;
+    setState(() {});
+
+    FirebaseFirestore.instance.collection('disciplinas').doc(idDisciplina).update({
+      'idEscola'      : escolaSelecionadaCadastro!.idEscola,
+      'nomeEscola'    : escolaSelecionadaCadastro!.nome,
+      'nomeDisciplina': nome.text.toUpperCase(),
+      'curso'         : curso.text.toUpperCase(),
+      'ano'           : int.parse(ano.text),
+      'ensino'        : ensino.text.toUpperCase(),
+    }).then((_){
+      escolaSelecionadaCadastro = null;
+      nome.clear();
+      curso.clear();
+      ano.clear();
+      ensino.clear();
+      salvando = false;
+      idDisciplina = '';
+      setState(() {});
+      showSnackBar(context, 'Alterado com sucesso', Colors.green);
+    });
+  }
+
   pesquisarDisciplina(){
     disciplinasLista.clear();
-    novoCadastro = false;
+    exibirCampos = false;
     if(pesquisar.text.length>2){
      if(escolaSelecionadaPesquisa!=null){
        FirebaseFirestore.instance.collection('disciplinas')
@@ -144,6 +171,75 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
       showSnackBar(context, 'Digite pelo menos 3 caracteres para pesquisar', Cores.erro);
     }
     setState(() {});
+  }
+
+  preencherCampos(DisciplinaModelo disciplina){
+    idDisciplina = disciplina.idDisciplina;
+    nome.text = disciplina.nomeDisciplina;
+    ensino.text = disciplina.ensino;
+    curso.text = disciplina.curso;
+    ano.text = disciplina.ano.toString();
+    exibirCampos = true;
+    for(int i = 0; escolasLista.length>i; i++){
+      if(disciplina.idEscola == escolasLista[i].idEscola){
+        escolaSelecionadaCadastro = escolasLista[i];
+        break;
+      }
+    }
+    setState(() {});
+  }
+
+  exibirExclusao(){
+    return showDialog(
+        context: context,
+        builder: (context){
+          return AlertDialog(
+            title: TextoPadrao(
+              texto: 'Confirmar Exclusão',
+              corTexto: Cores.erro,
+            ),
+            content: TextoPadrao(
+              texto: 'Deseja confirmar a exclusão da disciplina?',
+              corTexto: Cores.erro,
+            ),
+            actions: [
+              BotaoPadrao(
+                  titulo: 'Cancelar',
+                  corBotao: Colors.green,
+                  funcao:(){
+                    Navigator.pop(context);
+                  }
+              ),
+              BotaoPadrao(
+                  titulo: 'Excluir',
+                  corBotao: Cores.erro,
+                  funcao:(){
+                    apagarDisciplina();
+                  }
+              ),
+            ],
+          );
+        }
+    );
+  }
+
+  apagarDisciplina(){
+    FirebaseFirestore.instance.collection('disciplinas')
+        .doc(idDisciplina)
+        .update({
+      'status' : 'inativo'
+    }).then((_){
+      nome.clear();
+      curso.clear();
+      ensino.clear();
+      ano.clear();
+      escolaSelecionadaCadastro = null;
+      salvando = false;
+      idDisciplina = '';
+      Navigator.pop(context);
+      setState(() {});
+      showSnackBar(context, 'Excluído com sucesso', Colors.green);
+    });
   }
 
   @override
@@ -189,7 +285,7 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          novoCadastro?Container(width: 350):Container(
+                          exibirCampos?Container(width: 350):Container(
                             width: 350,
                             child: DropdownEscolas(
                               selecionado: escolaSelecionadaPesquisa,
@@ -207,13 +303,13 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              novoCadastro?Container(width: 350,):InputPadrao(
+                              exibirCampos?Container(width: 350,):InputPadrao(
                                 controller: pesquisar,
                                 titulo: 'Pesquisar pelo nome da disciplina',
                                 largura: 350,
                               ),
                               SizedBox(width: 20,),
-                              novoCadastro?Container(width: 120,):BotaoPadrao(
+                              exibirCampos?Container(width: 120,):BotaoPadrao(
                                   titulo: 'Pesquisar',
                                   largura: 120,
                                   funcao: (){
@@ -222,12 +318,18 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
                               ),
                               SizedBox(width: 20,),
                               BotaoPadrao(
-                                  titulo: novoCadastro?'x':'+',
+                                  titulo: exibirCampos?'x':'+',
                                   largura: 50,
                                   funcao: (){
                                     pesquisar.clear();
                                     disciplinasLista.clear();
-                                    novoCadastro = !novoCadastro;
+                                    ano.clear();
+                                    nome.clear();
+                                    curso.clear();
+                                    ensino.clear();
+                                    escolaSelecionadaCadastro = null;
+                                    idDisciplina = '';
+                                    exibirCampos = !exibirCampos;
                                     setState(() {});
                                   }
                               ),
@@ -236,7 +338,7 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
                         ],
                       ),
                     ),
-                    !novoCadastro?Container(
+                    !exibirCampos?Container(
                       height: 500,
                       width: 500,
                       child: ListView.builder(
@@ -246,9 +348,15 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
                               color: Colors.grey[200],
                               alignment: Alignment.centerLeft,
                               padding: EdgeInsets.symmetric(vertical: 10,horizontal: 30),
-                              child: TextoPadrao(
-                                texto: disciplinasLista[i].nomeDisciplina,
-                                corTexto: Cores.corPrincipal,
+                              child: ListTile(
+                                title: TextoPadrao(
+                                  texto: disciplinasLista[i].nomeDisciplina,
+                                  corTexto: Cores.corPrincipal,
+                                  textAling: TextAlign.start,
+                                ),
+                                onTap: (){
+                                  preencherCampos(disciplinasLista[i]);
+                                },
                               ),
                             );
                           }
@@ -308,11 +416,18 @@ class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
                             largura: 450,
                           ),
                           BotaoPadrao(
-                            titulo: 'Salvar',
+                            titulo: idDisciplina.isEmpty?'Salvar':'Alterar',
                             funcao: (){
                               verificarCampos();
                             },
-                          )
+                          ),
+                          idDisciplina.isNotEmpty?BotaoPadrao(
+                            titulo: 'Excluir',
+                            corBotao: Cores.erro,
+                            funcao: (){
+                              exibirExclusao();
+                            },
+                          ):Container()
                         ],
                       ),
                     ),

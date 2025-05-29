@@ -22,7 +22,7 @@ class CadastroAlunosTela extends StatefulWidget {
 class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
 
   bool salvando = false;
-  bool novoCadastro = false;
+  bool exibirCampos = false;
   EscolaModelo? escolaSelecionadaPesquisa;
   EscolaModelo? escolaSelecionadaCadastro;
   List<EscolaModelo> escolasLista = [];
@@ -41,6 +41,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
   TextEditingController numeroRegistro = TextEditingController();
   TextEditingController estadoCivil = TextEditingController();
   TextEditingController pesquisar = TextEditingController();
+  String idAluno = '';
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -81,7 +82,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                             if(estadoCivil.text.length>2){
                               if(idade.text.isNotEmpty){
                                 if(sexo.text.length>2){
-                                  salvarAluno();
+                                  idAluno.isEmpty?salvarAluno():editarAluno();
                                 }else{
                                   showSnackBar(context, 'Sexo Incompleto', Cores.erro);
                                 }
@@ -145,6 +146,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
       'ensino'        : ensino.text.toUpperCase(),
       'estadoCivil'   : estadoCivil.text.toUpperCase(),
       'sexo'          : sexo.text.toUpperCase(),
+      'status'        : 'ativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
       nome.clear();
@@ -165,13 +167,55 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
     });
   }
 
+  editarAluno(){
+    salvando = true;
+    setState(() {});
+
+    FirebaseFirestore.instance.collection('alunos').doc(idAluno).update({
+      'nomeAluno'     : nome.text.toUpperCase(),
+      'idEscola'      : escolaSelecionadaCadastro!.idEscola,
+      'nomeEscola'    : escolaSelecionadaCadastro!.nome,
+      'bairro'        : bairro.text.toUpperCase(),
+      'cep'           : cep.text,
+      'cidade'        : cidade.text.toUpperCase(),
+      'idade'         : int.parse(idade.text),
+      'endereco'      : endereco.text.toUpperCase(),
+      'numero'        : int.parse(numero.text),
+      'numeroRegistro': numeroRegistro.text,
+      'curso'         : curso.text.toUpperCase(),
+      'ano'           : int.parse(ano.text),
+      'ensino'        : ensino.text.toUpperCase(),
+      'estadoCivil'   : estadoCivil.text.toUpperCase(),
+      'sexo'          : sexo.text.toUpperCase(),
+    }).then((_){
+      escolaSelecionadaCadastro = null;
+      nome.clear();
+      curso.clear();
+      bairro.clear();
+      cep.clear();
+      cidade.clear();
+      idade.clear();
+      endereco.clear();
+      numero.clear();
+      numeroRegistro.clear();
+      estadoCivil.clear();
+      ano.clear();
+      ensino.clear();
+      salvando = false;
+      idAluno = '';
+      setState(() {});
+      showSnackBar(context, 'Alterado com sucesso', Colors.green);
+    });
+  }
+
   pesquisarAluno(){
     alunosLista.clear();
-    novoCadastro = false;
+    exibirCampos = false;
     if(pesquisar.text.length>2){
       if(escolaSelecionadaPesquisa!=null){
         FirebaseFirestore.instance.collection('alunos')
             .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
+            .where('status',isNotEqualTo: 'inativo')
             .orderBy('nomeAluno')
             .startAt([pesquisar.text.toUpperCase()])
             .endAt(['${pesquisar.text.toUpperCase()}\uf8ff']).get().then((alunosDoc){
@@ -211,6 +255,94 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
       showSnackBar(context, 'Digite pelo menos 3 caracteres para pesquisar', Cores.erro);
     }
     setState(() {});
+  }
+
+  preencherCampos(AlunoModelo aluno){
+    idAluno = aluno.idAluno;
+    nome.text = aluno.nomeAluno;
+    bairro.text = aluno.bairro;
+    cep.text = aluno.cep;
+    cidade.text = aluno.cidade;
+    endereco.text = aluno.endereco;
+    numero.text = aluno.numero.toString();
+    numeroRegistro.text = aluno.numeroRegistro;
+    estadoCivil.text = aluno.estadoCivil;
+    idade.text = aluno.idade.toString();
+    ensino.text = aluno.ensino;
+    curso.text = aluno.curso;
+    sexo.text = aluno.sexo;
+    ano.text = aluno.ano.toString();
+    exibirCampos = true;
+    alunosLista.clear();
+    for(int i = 0; escolasLista.length>i; i++){
+      if(aluno.idEscola == escolasLista[i].idEscola){
+        escolaSelecionadaCadastro = escolasLista[i];
+        break;
+      }
+    }
+    setState(() {});
+  }
+
+  exibirExclusao(){
+    return showDialog(
+        context: context,
+        builder: (context){
+          return AlertDialog(
+            title: TextoPadrao(
+              texto: 'Confirmar Exclusão',
+              corTexto: Cores.erro,
+            ),
+            content: TextoPadrao(
+              texto: 'Deseja confirmar a exclusão do(a) aluno(a)?',
+              corTexto: Cores.erro,
+            ),
+            actions: [
+              BotaoPadrao(
+                  titulo: 'Cancelar',
+                  corBotao: Colors.green,
+                  funcao:(){
+                    Navigator.pop(context);
+                  }
+              ),
+              BotaoPadrao(
+                  titulo: 'Excluir',
+                  corBotao: Cores.erro,
+                  funcao:(){
+                    apagarAluno();
+                  }
+              ),
+            ],
+          );
+        }
+    );
+  }
+
+  apagarAluno(){
+    FirebaseFirestore.instance.collection('alunos')
+        .doc(idAluno)
+        .update({
+      'status' : 'inativo'
+    }).then((_){
+      escolaSelecionadaCadastro = null;
+      nome.clear();
+      estadoCivil.clear();
+      idade.clear();
+      curso.clear();
+      ano.clear();
+      endereco.clear();
+      numero.clear();
+      bairro.clear();
+      cidade.clear();
+      ensino.clear();
+      sexo.clear();
+      cep.clear();
+      numeroRegistro.clear();
+      salvando = false;
+      idAluno = '';
+      Navigator.pop(context);
+      setState(() {});
+      showSnackBar(context, 'Excluído com sucesso', Colors.green);
+    });
   }
 
   @override
@@ -255,7 +387,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          novoCadastro?Container(width: 350):Container(
+                          exibirCampos?Container(width: 350):Container(
                             width: 350,
                             child: DropdownEscolas(
                               selecionado: escolaSelecionadaPesquisa,
@@ -274,13 +406,13 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              novoCadastro?Container(width: 350,):InputPadrao(
+                              exibirCampos?Container(width: 350,):InputPadrao(
                                 controller: pesquisar,
                                 titulo: 'Pesquisar pelo nome do(a) aluno(a)',
                                 largura: 350,
                               ),
                               SizedBox(width: 20,),
-                              novoCadastro?Container(width: 120,):BotaoPadrao(
+                              exibirCampos?Container(width: 120,):BotaoPadrao(
                                   titulo: 'Pesquisar',
                                   largura: 120,
                                   funcao: (){
@@ -289,11 +421,11 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                               ),
                               SizedBox(width: 20,),
                               BotaoPadrao(
-                                  titulo: novoCadastro?'x':'+',
+                                  titulo: exibirCampos?'x':'+',
                                   largura: 50,
                                   funcao: (){
                                     pesquisar.clear();
-                                    novoCadastro = !novoCadastro;
+                                    exibirCampos = !exibirCampos;
                                     setState(() {});
                                   }
                               ),
@@ -302,7 +434,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                         ],
                       ),
                     ),
-                    !novoCadastro?Container(
+                    !exibirCampos?Container(
                       height: 500,
                       width: 500,
                       child: ListView.builder(
@@ -312,9 +444,15 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                               color: Colors.grey[200],
                               alignment: Alignment.centerLeft,
                               padding: EdgeInsets.symmetric(vertical: 10,horizontal: 30),
-                              child: TextoPadrao(
-                                texto: alunosLista[i].nomeAluno,
-                                corTexto: Cores.corPrincipal,
+                              child: ListTile(
+                                title: TextoPadrao(
+                                  texto: alunosLista[i].nomeAluno,
+                                  corTexto: Cores.corPrincipal,
+                                  textAling: TextAlign.start,
+                                ),
+                                onTap: (){
+                                  preencherCampos(alunosLista[i]);
+                                },
                               ),
                             );
                           }
@@ -475,11 +613,18 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                             ),
                           ),
                           BotaoPadrao(
-                            titulo: 'Salvar',
+                            titulo: idAluno.isEmpty?'Salvar':'Alterar',
                             funcao: (){
                               verificarCampos();
                             },
-                          )
+                          ),
+                          idAluno.isNotEmpty?BotaoPadrao(
+                            titulo: 'Excluir',
+                            corBotao: Cores.erro,
+                            funcao: (){
+                              exibirExclusao();
+                            },
+                          ):Container()
                         ],
                       ),
                     ),

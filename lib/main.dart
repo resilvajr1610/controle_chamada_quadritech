@@ -1,4 +1,6 @@
-import 'package:controle_chamada_quadritech/telas/cadastro_escolas_tela.dart';
+import 'package:controle_chamada_quadritech/telas/cadastro_alunos_tela.dart';
+import 'package:controle_chamada_quadritech/telas/cadastro_professores_tela.dart';
+import 'package:controle_chamada_quadritech/telas/login_tela.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
@@ -17,7 +19,7 @@ void main() async {
     MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Quadritech',
-      home: CadastroEscolasTela(),
+      home: CadastroAlunosTela(),
     )
   );
 }

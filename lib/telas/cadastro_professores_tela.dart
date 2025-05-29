@@ -38,14 +38,14 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
   TextEditingController estadoCivil = TextEditingController();
   TextEditingController pesquisar = TextEditingController();
   bool salvando = false;
-  bool novoCadastro = false;
-  List<DisciplinaModelo> disciplinasListaPesquisa = [];
+  bool exibirCampos = false;
   List<DisciplinaModelo> disciplinasListaCadastro = [];
   List<EscolaModelo> escolasLista = [];
   List<ProfessorModelo> professoresLista = [];
   EscolaModelo? escolaSelecionadaPesquisa;
   EscolaModelo? escolaSelecionadaCadastro;
   DisciplinaModelo? disciplinaSelecionadaCadastro;
+  String idProfessor = '';
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -72,7 +72,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
     });
   }
 
-  carregarDisciplinas(){
+  carregarDisciplinasCadastro({ProfessorModelo? professor}){
     disciplinasListaCadastro.clear();
     disciplinaSelecionadaCadastro = null;
     setState(() {});
@@ -91,6 +91,11 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
               curso: disciplinasDoc.docs[i]['curso'],
             )
         );
+        if(idProfessor.isNotEmpty){
+          if(disciplinasListaCadastro[i].idDisciplina == professor!.idDisciplina){
+            disciplinaSelecionadaCadastro = disciplinasListaCadastro[i];
+          }
+        }
       }
       if(disciplinasListaCadastro.isEmpty){
         showSnackBar(context, 'Nenhuma disciplina cadastrada nessa escola', Cores.erro);
@@ -115,7 +120,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                           if(cep.text.length==10){
                             if(estadoCivil.text.length>2){
                               if(idade.text.isNotEmpty){
-                                salvarProfessor();
+                                idProfessor.isEmpty?salvarProfessor():editarProfessor();
                               }else{
                                 showSnackBar(context, 'Idade Incompleta', Cores.erro);
                               }
@@ -184,25 +189,83 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
       'ano'           : int.parse(ano.text),
       'ensino'        : ensino.text.toUpperCase(),
       'estadoCivil'   : estadoCivil.text.toUpperCase(),
+      'status'          : 'ativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
+      disciplinaSelecionadaCadastro = null;
       nome.clear();
+      estadoCivil.clear();
+      idade.clear();
       curso.clear();
       ano.clear();
+      formacao.clear();
+      endereco.clear();
+      numero.clear();
+      bairro.clear();
+      cidade.clear();
       ensino.clear();
+      cep.clear();
+      numeroRegistro.clear();
       salvando = false;
       setState(() {});
       showSnackBar(context, 'Salvo com sucesso', Colors.green);
     });
   }
 
+  editarProfessor(){
+    salvando = true;
+    setState(() {});
+
+    FirebaseFirestore.instance.collection('professores').doc(idProfessor).update({
+      'nomeProf'      : nome.text.toUpperCase(),
+      'idEscola'      : escolaSelecionadaCadastro!.idEscola,
+      'nomeEscola'    : escolaSelecionadaCadastro!.nome,
+      'idDisciplina'  : disciplinaSelecionadaCadastro!.idDisciplina,
+      'nomeDisciplina': disciplinaSelecionadaCadastro!.nomeDisciplina,
+      'bairro'        : bairro.text.toUpperCase(),
+      'cep'           : cep.text,
+      'cidade'        : cidade.text.toUpperCase(),
+      'idade'         : int.parse(idade.text),
+      'endereco'      : endereco.text.toUpperCase(),
+      'numero'        : int.parse(numero.text),
+      'numeroRegistro': numeroRegistro.text,
+      'curso'         : curso.text.toUpperCase(),
+      'formacao'      : formacao.text.toUpperCase(),
+      'ano'           : int.parse(ano.text),
+      'ensino'        : ensino.text.toUpperCase(),
+      'estadoCivil'   : estadoCivil.text.toUpperCase(),
+    }).then((_){
+      escolaSelecionadaCadastro = null;
+      disciplinaSelecionadaCadastro = null;
+      nome.clear();
+      estadoCivil.clear();
+      idade.clear();
+      curso.clear();
+      ano.clear();
+      formacao.clear();
+      endereco.clear();
+      numero.clear();
+      bairro.clear();
+      cidade.clear();
+      ensino.clear();
+      cep.clear();
+      numeroRegistro.clear();
+
+      idProfessor = '';
+      salvando = false;
+      setState(() {});
+      showSnackBar(context, 'Alterado com sucesso', Colors.green);
+    });
+  }
+
   pesquisarProfessor(){
     professoresLista.clear();
-    novoCadastro = false;
+    exibirCampos = false;
     if(pesquisar.text.length>2){
       if(escolaSelecionadaPesquisa!=null){
         FirebaseFirestore.instance.collection('professores')
             .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
+            .where('status',isNotEqualTo: 'inativo')
             .orderBy('nomeProf')
             .startAt([pesquisar.text.toUpperCase()])
             .endAt(['${pesquisar.text.toUpperCase()}\uf8ff']).get().then((professoresDoc){
@@ -246,7 +309,97 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
     setState(() {});
   }
 
- @override
+  preencherCampos(ProfessorModelo professor){
+    idProfessor = professor.idProf;
+    nome.text = professor.nomeProf;
+    bairro.text = professor.bairro;
+    cep.text = professor.cep;
+    cidade.text = professor.cidade;
+    endereco.text = professor.endereco;
+    numero.text = professor.numero.toString();
+    numeroRegistro.text = professor.numeroRegistro;
+    estadoCivil.text = professor.estadoCivil;
+    idade.text = professor.idade.toString();
+    formacao.text = professor.formacao;
+    ensino.text = professor.ensino;
+    curso.text = professor.curso;
+    ano.text = professor.ano.toString();
+    exibirCampos = true;
+    professoresLista.clear();
+    for(int i = 0; escolasLista.length>i; i++){
+      if(professor.idEscola == escolasLista[i].idEscola){
+        escolaSelecionadaCadastro = escolasLista[i];
+        carregarDisciplinasCadastro(professor: professor);
+        break;
+      }
+    }
+    setState(() {});
+  }
+
+  exibirExclusao(){
+    return showDialog(
+        context: context,
+        builder: (context){
+          return AlertDialog(
+            title: TextoPadrao(
+              texto: 'Confirmar Exclusão',
+              corTexto: Cores.erro,
+            ),
+            content: TextoPadrao(
+              texto: 'Deseja confirmar a exclusão do(a) professor(a)?',
+              corTexto: Cores.erro,
+            ),
+            actions: [
+              BotaoPadrao(
+                  titulo: 'Cancelar',
+                  corBotao: Colors.green,
+                  funcao:(){
+                    Navigator.pop(context);
+                  }
+              ),
+              BotaoPadrao(
+                  titulo: 'Excluir',
+                  corBotao: Cores.erro,
+                  funcao:(){
+                    apagarProfessor();
+                  }
+              ),
+            ],
+          );
+        }
+    );
+  }
+
+  apagarProfessor(){
+    FirebaseFirestore.instance.collection('professores')
+        .doc(idProfessor)
+        .update({
+      'status' : 'inativo'
+    }).then((_){
+      escolaSelecionadaCadastro = null;
+      disciplinaSelecionadaCadastro = null;
+      nome.clear();
+      estadoCivil.clear();
+      idade.clear();
+      curso.clear();
+      ano.clear();
+      formacao.clear();
+      endereco.clear();
+      numero.clear();
+      bairro.clear();
+      cidade.clear();
+      ensino.clear();
+      cep.clear();
+      numeroRegistro.clear();
+      salvando = false;
+      idProfessor = '';
+      Navigator.pop(context);
+      setState(() {});
+      showSnackBar(context, 'Excluído com sucesso', Colors.green);
+    });
+  }
+
+  @override
   void initState() {
     super.initState();
     carregarEscolas();
@@ -289,7 +442,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          novoCadastro?Container(width: 350):Container(
+                          exibirCampos?Container(width: 350):Container(
                             width: 350,
                             child: DropdownEscolas(
                               selecionado: escolaSelecionadaPesquisa,
@@ -308,13 +461,13 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                             mainAxisAlignment: MainAxisAlignment.start,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              novoCadastro?Container(width: 350,):InputPadrao(
+                              exibirCampos?Container(width: 350,):InputPadrao(
                                 controller: pesquisar,
                                 titulo: 'Pesquisar pelo nome do(a) professor(a)',
                                 largura: 350,
                               ),
                               SizedBox(width: 20,),
-                              novoCadastro?Container(width: 120,):BotaoPadrao(
+                              exibirCampos?Container(width: 120,):BotaoPadrao(
                                   titulo: 'Pesquisar',
                                   largura: 120,
                                   funcao: (){
@@ -323,12 +476,11 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                               ),
                               SizedBox(width: 20,),
                               BotaoPadrao(
-                                  titulo: novoCadastro?'x':'+',
+                                  titulo: exibirCampos?'x':'+',
                                   largura: 50,
                                   funcao: (){
                                     pesquisar.clear();
-                                    disciplinasListaPesquisa.clear();
-                                    novoCadastro = !novoCadastro;
+                                    exibirCampos = !exibirCampos;
                                     setState(() {});
                                   }
                               ),
@@ -337,7 +489,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                         ],
                       ),
                     ),
-                    !novoCadastro?Container(
+                    !exibirCampos?Container(
                       height: 500,
                       width: 500,
                       child: ListView.builder(
@@ -347,9 +499,15 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                               color: Colors.grey[200],
                               alignment: Alignment.centerLeft,
                               padding: EdgeInsets.symmetric(vertical: 10,horizontal: 30),
-                              child: TextoPadrao(
-                                texto: professoresLista[i].nomeProf,
-                                corTexto: Cores.corPrincipal,
+                              child: ListTile(
+                                title: TextoPadrao(
+                                  texto: professoresLista[i].nomeProf,
+                                  corTexto: Cores.corPrincipal,
+                                  textAling: TextAlign.start,
+                                ),
+                                onTap: (){
+                                  preencherCampos(professoresLista[i]);
+                                },
                               ),
                             );
                           }
@@ -377,7 +535,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                                     onChanged: (valor){
                                       escolaSelecionadaCadastro = valor;
                                       setState(() {});
-                                      carregarDisciplinas();
+                                      carregarDisciplinasCadastro();
                                     },
                                   ),
                                 ),
@@ -533,11 +691,18 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                             ),
                           ),
                           BotaoPadrao(
-                            titulo: 'Salvar',
+                            titulo: idProfessor.isEmpty?'Salvar':'Alterar',
                             funcao: (){
                               verificarCampos();
                             },
-                          )
+                          ),
+                          idProfessor.isNotEmpty?BotaoPadrao(
+                            titulo: 'Excluir',
+                            corBotao: Cores.erro,
+                            funcao: (){
+                              exibirExclusao();
+                            },
+                          ):Container()
                         ],
                       ),
                     ),
