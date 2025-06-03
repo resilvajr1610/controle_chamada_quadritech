@@ -21,6 +21,7 @@ dev_dependencies:
   cloud_firestore:
   firebase_auth:
   brasil_fields:
+  firebase_storage:
 
 flutter:
 

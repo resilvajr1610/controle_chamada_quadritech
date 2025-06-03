@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:controle_chamada_quadritech/modelo/aluno_modelo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 import '../modelo/cores.dart';
 import '../modelo/escola_modelo.dart';
@@ -11,6 +13,7 @@ import '../widgets/menu_web.dart';
 import '../widgets/snackbar.dart';
 import '../widgets/texto_padrao.dart';
 import 'package:brasil_fields/brasil_fields.dart';
+import 'dart:html' as html;
 
 class CadastroAlunosTela extends StatefulWidget {
   const CadastroAlunosTela({super.key});
@@ -42,6 +45,8 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
   TextEditingController estadoCivil = TextEditingController();
   TextEditingController pesquisar = TextEditingController();
   String idAluno = '';
+  Uint8List? imagemweb;
+  String urlImagem = '';
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -82,7 +87,15 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                             if(estadoCivil.text.length>2){
                               if(idade.text.isNotEmpty){
                                 if(sexo.text.length>2){
-                                  idAluno.isEmpty?salvarAluno():editarAluno();
+                                  if(imagemweb!=null || urlImagem.isNotEmpty){
+                                    if(imagemweb!=null){
+                                      salvarFoto();
+                                    }else{
+                                      idAluno.isEmpty?salvarAluno():editarAluno();
+                                    }
+                                  }else{
+                                    showSnackBar(context, 'Selecione uma foto do rosto do aluno(a) para avançar', Colors.red);
+                                  }
                                 }else{
                                   showSnackBar(context, 'Sexo Incompleto', Cores.erro);
                                 }
@@ -146,7 +159,8 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
       'ensino'        : ensino.text.toUpperCase(),
       'estadoCivil'   : estadoCivil.text.toUpperCase(),
       'sexo'          : sexo.text.toUpperCase(),
-      'status'        : 'ativo'
+      'urlImagem'     : urlImagem,
+      'status'        : 'ativo',
     }).then((_){
       escolaSelecionadaCadastro = null;
       nome.clear();
@@ -161,6 +175,8 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
       estadoCivil.clear();
       ano.clear();
       ensino.clear();
+      urlImagem = '';
+      imagemweb = null;
       salvando = false;
       setState(() {});
       showSnackBar(context, 'Salvo com sucesso', Colors.green);
@@ -187,6 +203,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
       'ensino'        : ensino.text.toUpperCase(),
       'estadoCivil'   : estadoCivil.text.toUpperCase(),
       'sexo'          : sexo.text.toUpperCase(),
+      'urlImagem'     : urlImagem,
     }).then((_){
       escolaSelecionadaCadastro = null;
       nome.clear();
@@ -201,6 +218,8 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
       estadoCivil.clear();
       ano.clear();
       ensino.clear();
+      urlImagem = '';
+      imagemweb = null;
       salvando = false;
       idAluno = '';
       setState(() {});
@@ -239,6 +258,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                   ano: alunosDoc.docs[i]['ano'],
                   ensino: alunosDoc.docs[i]['ensino'],
                   sexo: alunosDoc.docs[i]['sexo'],
+                  urlImagem: alunosDoc.docs[i].data().containsKey('urlImagem')? alunosDoc.docs[i]['urlImagem']: '',
                 )
             );
           }
@@ -272,6 +292,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
     curso.text = aluno.curso;
     sexo.text = aluno.sexo;
     ano.text = aluno.ano.toString();
+    urlImagem = aluno.urlImagem;
     exibirCampos = true;
     alunosLista.clear();
     for(int i = 0; escolasLista.length>i; i++){
@@ -342,6 +363,52 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
       Navigator.pop(context);
       setState(() {});
       showSnackBar(context, 'Excluído com sucesso', Colors.green);
+    });
+  }
+
+  adionarFoto() {
+    html.FileUploadInputElement uploadInput = html.FileUploadInputElement();
+    uploadInput.accept = 'image/*';
+    uploadInput.click();
+    html.document.body!.append(uploadInput);
+
+    uploadInput.onChange.listen((e) async {
+      final files = uploadInput.files;
+      final file = files![0];
+      final reader = html.FileReader();
+
+      reader.onLoadEnd.listen((e) {
+        var _bytesData = Base64Decoder().convert(reader.result.toString().split(",").last);
+        print('pegou');
+        setState(() {
+          imagemweb = _bytesData;
+          urlImagem = '';
+        });
+      });
+      reader.readAsDataUrl(file);
+    });
+    uploadInput.remove();
+  }
+
+  salvarFoto() async {
+    salvando = true;
+    setState(() {});
+
+    String nomeImagem = 'aluno_${DateTime.now().toIso8601String()}.jpg';
+    Uint8List arquivoSelecionado = imagemweb!;
+
+    if (arquivoSelecionado.isEmpty) {
+      return;
+    }
+
+    FirebaseStorage storage = FirebaseStorage.instance;
+    Reference reference = storage.ref('alunos/fotos/').child(nomeImagem);
+    UploadTask uploadTaskSnapshot = reference.putData(arquivoSelecionado);
+
+    final TaskSnapshot downloadUrl = await uploadTaskSnapshot;
+    urlImagem = (await downloadUrl.ref.getDownloadURL());
+    Future.delayed(Duration(seconds: 1),(){
+      idAluno.isEmpty?salvarAluno():editarAluno();
     });
   }
 
@@ -458,11 +525,28 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                           }
                       ),
                     ):Container(
-                      height: 750,
+                      height: 850,
                       width: 450,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          InkWell(
+                            onTap: () => adionarFoto(),
+                            child: CircleAvatar(
+                              backgroundColor: Colors.grey,
+                              maxRadius: 50,
+                              backgroundImage: urlImagem.isNotEmpty
+                                  ? NetworkImage(urlImagem)
+                                  : (imagemweb != null ? MemoryImage(imagemweb!) : null) as ImageProvider?,
+                              child: imagemweb == null && urlImagem.isEmpty
+                                ? Icon(
+                                  Icons.add_a_photo,
+                                  size: 30,
+                                  color: Colors.white,
+                                )
+                                : null,
+                            ),
+                          ),
                           Container(
                             width: 485,
                             child: DropdownEscolas(

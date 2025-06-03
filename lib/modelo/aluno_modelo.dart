@@ -15,6 +15,7 @@ class AlunoModelo {
   String estadoCivil;
   String curso;
   int ano;
+  String urlImagem;
 
   AlunoModelo({
     required this.idAluno,
@@ -33,5 +34,6 @@ class AlunoModelo {
     required this.estadoCivil,
     required this.curso,
     required this.ano,
+    required this.urlImagem,
   });
 }
