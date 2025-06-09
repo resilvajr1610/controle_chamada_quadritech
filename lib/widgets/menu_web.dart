@@ -1,3 +1,4 @@
+import 'package:controle_chamada_quadritech/telas/chamadas_tela.dart';
 import 'package:controle_chamada_quadritech/widgets/logo_home.dart';
 import 'package:flutter/material.dart';
 import '../telas/cadastro_alunos_tela.dart';
@@ -20,6 +21,7 @@ class MenuWeb extends StatelessWidget {
         Row(
           children: [
             LogoHome(),
+            Spacer(),
             ItemMenu(
               texto: 'ESCOLAS',
               destino: CadastroEscolasTela(),
@@ -36,6 +38,11 @@ class MenuWeb extends StatelessWidget {
               texto: 'ALUNOS',
               destino: CadastroAlunosTela(),
             ),
+            ItemMenu(
+              texto: 'CHAMADAS',
+              destino: ChamadasTela(),
+            ),
+            Spacer(),
             ItemMenu(
               texto: 'SAIR',
               destino: LoginTela(),

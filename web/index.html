@@ -10,17 +10,17 @@
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="controle_chamada_quadritech">
+  <meta name="apple-mobile-web-app-title" content="Controle de Chamadas Quadritech">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
+  <meta name="description" content="Controle de Chamadas Quadritech" />
 
-  <title>controle_chamada_quadritech</title>
+  <title>Controle Chamada Quadritech</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
   <script>
   var firebaseConfig = {
     apiKey: "AIzaSyDnTpi7ISyosCjN3b7yxjhQVTTFJ8y5M2E",
@@ -32,7 +32,7 @@
     measurementId: "G-7GVSESB5YG"
   };
   firebase.initializeApp(firebaseConfig);
-  firebase.analytics(app);
+  firebase.analytics();
   </script>
   <script type="text/javascript">
     let useHtml = true;
@@ -42,6 +42,6 @@
       window.flutterWebRenderer = "canvaskit";
     }
   </script>
-  <script src="main.dart.js" type="application/javascript"></script>
+  <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -22,6 +22,7 @@ dev_dependencies:
   firebase_auth:
   brasil_fields:
   firebase_storage:
+  face_detection_web:
 
 flutter:
 

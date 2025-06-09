@@ -1,4 +1,4 @@
-import 'package:controle_chamada_quadritech/telas/home_tela.dart';
+import 'package:controle_chamada_quadritech/telas/reconhecimento_tela.dart';
 import 'package:flutter/material.dart';
 
 class LogoHome extends StatelessWidget {
@@ -12,7 +12,7 @@ class LogoHome extends StatelessWidget {
     return InkWell(
       child: Image.asset('assets/imagens/logo.png',width: largura*0.15,),
       onTap: (){
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>HomeTela()));
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>ReconhecimentoTela()));
       },
     );
   }

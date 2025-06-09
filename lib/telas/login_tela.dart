@@ -1,5 +1,5 @@
 import 'package:controle_chamada_quadritech/modelo/cores.dart';
-import 'package:controle_chamada_quadritech/telas/home_tela.dart';
+import 'package:controle_chamada_quadritech/telas/reconhecimento_tela.dart';
 import 'package:controle_chamada_quadritech/widgets/botao_padrao.dart';
 import 'package:controle_chamada_quadritech/widgets/input_padrao.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +28,7 @@ class _LoginTelaState extends State<LoginTela> {
   //senha teste123
   fazerLogin(){
     if(email.text=='teste' && senha.text == 'teste123'){
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>HomeTela()));
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=>ReconhecimentoTela()));
     }else{
       showSnackBar(context, 'E-mail e/ou senha incorreto(s)', Cores.erro);
     }

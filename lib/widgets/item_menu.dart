@@ -20,7 +20,7 @@ class ItemMenu extends StatelessWidget {
     return Card(
       child: Container(
         height: 50,
-        width: largura*0.15,
+        width: largura*0.1,
         child: ListTile(
           onTap: (){
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> destino));

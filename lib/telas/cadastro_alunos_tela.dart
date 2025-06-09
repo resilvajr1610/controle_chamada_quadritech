@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:controle_chamada_quadritech/modelo/aluno_modelo.dart';
+import 'package:controle_chamada_quadritech/modelo/disciplina_modelo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -7,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../modelo/cores.dart';
 import '../modelo/escola_modelo.dart';
 import '../widgets/botao_padrao.dart';
+import '../widgets/dropdown_disciplinas.dart';
 import '../widgets/dropdown_escolas.dart';
 import '../widgets/input_padrao.dart';
 import '../widgets/menu_web.dart';
@@ -30,6 +33,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
   EscolaModelo? escolaSelecionadaCadastro;
   List<EscolaModelo> escolasLista = [];
   List<AlunoModelo> alunosLista = [];
+  List<DisciplinaModelo> disciplinasBanco = [];
   TextEditingController nome = TextEditingController();
   TextEditingController ensino = TextEditingController();
   TextEditingController curso = TextEditingController();
@@ -47,6 +51,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
   String idAluno = '';
   Uint8List? imagemweb;
   String urlImagem = '';
+  DisciplinaModelo? disciplinaSelecionadaCadastro;
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -73,6 +78,35 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
     });
   }
 
+  carregarDisciplinas(String idEscola){
+
+    disciplinasBanco.clear();
+    disciplinaSelecionadaCadastro = null;
+    setState(() {});
+    FirebaseFirestore.instance.collection('disciplinas')
+        .where('idEscola',isEqualTo: idEscola)
+        .where('status',isEqualTo: 'ativo')
+        .orderBy('nomeDisciplina')
+        .get()
+        .then((disciplinasDoc){
+
+      for(int i = 0; disciplinasDoc.docs.length > i;i++){
+        disciplinasBanco.add(
+          DisciplinaModelo(
+            idEscola: disciplinasDoc.docs[i].id,
+            ensino: disciplinasDoc.docs[i]['ensino'],
+            nomeDisciplina: disciplinasDoc.docs[i]['nomeDisciplina'],
+            ano: disciplinasDoc.docs[i]['ano'],
+            curso: disciplinasDoc.docs[i]['curso'],
+            idDisciplina: disciplinasDoc.docs[i].id,
+            nomeEscola: disciplinasDoc.docs[i]['nomeEscola'],
+          )
+        );
+      }
+      setState(() {});
+    });
+  }
+
   verificarCampos(){
     if(escolaSelecionadaCadastro!=null){
         if(nome.text.length>5){
@@ -87,14 +121,18 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                             if(estadoCivil.text.length>2){
                               if(idade.text.isNotEmpty){
                                 if(sexo.text.length>2){
-                                  if(imagemweb!=null || urlImagem.isNotEmpty){
-                                    if(imagemweb!=null){
-                                      salvarFoto();
+                                  if(disciplinaSelecionadaCadastro!=null){
+                                    if(imagemweb!=null || urlImagem.isNotEmpty){
+                                      if(imagemweb!=null){
+                                        salvarFoto();
+                                      }else{
+                                        idAluno.isEmpty?salvarAluno():editarAluno();
+                                      }
                                     }else{
-                                      idAluno.isEmpty?salvarAluno():editarAluno();
+                                      showSnackBar(context, 'Selecione uma foto do rosto do aluno(a) para avançar', Colors.red);
                                     }
                                   }else{
-                                    showSnackBar(context, 'Selecione uma foto do rosto do aluno(a) para avançar', Colors.red);
+                                    showSnackBar(context, 'Selecione uma disciplina para avançar', Colors.red);
                                   }
                                 }else{
                                   showSnackBar(context, 'Sexo Incompleto', Cores.erro);
@@ -147,6 +185,8 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
       'nomeAluno'     : nome.text.toUpperCase(),
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
+      'idDisciplina'  : disciplinaSelecionadaCadastro!.idDisciplina,
+      'nomeDisciplina': disciplinaSelecionadaCadastro!.nomeDisciplina,
       'bairro'        : bairro.text.toUpperCase(),
       'cep'           : cep.text,
       'cidade'        : cidade.text.toUpperCase(),
@@ -191,6 +231,8 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
       'nomeAluno'     : nome.text.toUpperCase(),
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
+      'idDisciplina'  : disciplinaSelecionadaCadastro!.idDisciplina,
+      'nomeDisciplina': disciplinaSelecionadaCadastro!.nomeDisciplina,
       'bairro'        : bairro.text.toUpperCase(),
       'cep'           : cep.text,
       'cidade'        : cidade.text.toUpperCase(),
@@ -258,6 +300,8 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                   ano: alunosDoc.docs[i]['ano'],
                   ensino: alunosDoc.docs[i]['ensino'],
                   sexo: alunosDoc.docs[i]['sexo'],
+                  idDisciplina: alunosDoc.docs[i].data().containsKey('idDisciplina')?alunosDoc.docs[i]['idDisciplina']:'',
+                  nomeDisciplina: alunosDoc.docs[i].data().containsKey('nomeDisciplina')?alunosDoc.docs[i]['nomeDisciplina']:'',
                   urlImagem: alunosDoc.docs[i].data().containsKey('urlImagem')? alunosDoc.docs[i]['urlImagem']: '',
                 )
             );
@@ -298,6 +342,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
     for(int i = 0; escolasLista.length>i; i++){
       if(aluno.idEscola == escolasLista[i].idEscola){
         escolaSelecionadaCadastro = escolasLista[i];
+        carregarDisciplinas(aluno.idEscola);
         break;
       }
     }
@@ -371,7 +416,6 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
     uploadInput.accept = 'image/*';
     uploadInput.click();
     html.document.body!.append(uploadInput);
-
     uploadInput.onChange.listen((e) async {
       final files = uploadInput.files;
       final file = files![0];
@@ -379,7 +423,6 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
 
       reader.onLoadEnd.listen((e) {
         var _bytesData = Base64Decoder().convert(reader.result.toString().split(",").last);
-        print('pegou');
         setState(() {
           imagemweb = _bytesData;
           urlImagem = '';
@@ -389,6 +432,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
     });
     uploadInput.remove();
   }
+
 
   salvarFoto() async {
     salvando = true;
@@ -525,7 +569,7 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                           }
                       ),
                     ):Container(
-                      height: 850,
+                      height: 950,
                       width: 450,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -558,8 +602,23 @@ class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
                               larguraContainer: 400,
                               onChanged: (valor){
                                 escolaSelecionadaCadastro = valor;
+                                carregarDisciplinas(escolaSelecionadaCadastro!.idEscola);
                                 setState(() {});
-                                // carregarDisciplinas();
+                              },
+                            ),
+                          ),
+                          Container(
+                            width: 485,
+                            child: DropdownDisciplinas(
+                              selecionado: disciplinaSelecionadaCadastro,
+                              titulo: 'Disciplina *',
+                              hint: 'Selecione uma disciplina',
+                              lista: disciplinasBanco,
+                              largura: 519,
+                              larguraContainer: 400,
+                              onChanged: (valor){
+                                disciplinaSelecionadaCadastro = valor;
+                                setState(() {});
                               },
                             ),
                           ),
