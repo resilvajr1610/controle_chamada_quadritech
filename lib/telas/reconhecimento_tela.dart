@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:controle_chamada_quadritech/modelo/professor_modelo.dart';
 import 'package:controle_chamada_quadritech/widgets/snackbar.dart';
 import 'package:http/http.dart' as http;
 import 'package:controle_chamada_quadritech/modelo/cores.dart';
@@ -17,6 +18,8 @@ import 'dart:html' as html;
 import 'dart:ui_web' as ui;
 import 'package:http_parser/http_parser.dart';
 
+import '../widgets/dropdown_professores.dart';
+
 class ReconhecimentoTela extends StatefulWidget {
   const ReconhecimentoTela({super.key});
 
@@ -27,15 +30,15 @@ class ReconhecimentoTela extends StatefulWidget {
 class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
 
   List<EscolaModelo> escolasLista = [];
-  List<DisciplinaModelo> disciplinasLista = [];
+  List<ProfessorModelo> professoresLista = [];
   EscolaModelo? escolaSelecionada;
-  List<DisciplinaModelo> disciplinasBanco = [];
-  DisciplinaModelo? disciplinaSelecionada;
+  ProfessorModelo? professorSelecionado;
   html.VideoElement? _video;
   html.MediaStream? _mediaStream;
   Timer? _timer;
   String _resultado = '';
   bool aguardando = false;
+  bool travarOpcoes = false;
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -62,28 +65,39 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     });
   }
 
-  carregarDisciplinas(String idEscola){
+  carregarProfessores(String idEscola){
 
-    disciplinasBanco.clear();
-    disciplinaSelecionada = null;
+    professoresLista.clear();
+    professorSelecionado = null;
     setState(() {});
-    FirebaseFirestore.instance.collection('disciplinas')
+    FirebaseFirestore.instance.collection('professores')
         .where('idEscola',isEqualTo: idEscola)
         .where('status',isEqualTo: 'ativo')
-        .orderBy('nomeDisciplina')
+        .orderBy('nomeProf')
         .get()
-        .then((disciplinasDoc){
+        .then((professoresDoc){
 
-      for(int i = 0; disciplinasDoc.docs.length > i;i++){
-        disciplinasBanco.add(
-            DisciplinaModelo(
-              idEscola: disciplinasDoc.docs[i].id,
-              ensino: disciplinasDoc.docs[i]['ensino'],
-              nomeDisciplina: disciplinasDoc.docs[i]['nomeDisciplina'],
-              ano: disciplinasDoc.docs[i]['ano'],
-              curso: disciplinasDoc.docs[i]['curso'],
-              idDisciplina: disciplinasDoc.docs[i].id,
-              nomeEscola: disciplinasDoc.docs[i]['nomeEscola'],
+      for(int i = 0; professoresDoc.docs.length > i;i++){
+        professoresLista.add(
+            ProfessorModelo(
+              idProf: professoresDoc.docs[i].id,
+              nomeProf: professoresDoc.docs[i]['nomeProf'],
+              idEscola: professoresDoc.docs[i]['idEscola'],
+              nomeEscola: professoresDoc.docs[i]['nomeEscola'],
+              idDisciplina: professoresDoc.docs[i]['idDisciplina'],
+              nomeDisciplina: professoresDoc.docs[i]['nomeDisciplina'],
+              ensino: '',
+              ano: 0,
+              curso: professoresDoc.docs[i]['curso'],
+              cidade: '',
+              estadoCivil: '',
+              bairro: '',
+              cep: '',
+              endereco: '',
+              formacao: '',
+              idade: 0,
+              numero: 0,
+              numeroRegistro: ''
             )
         );
       }
@@ -96,17 +110,17 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
 
     _video = html.VideoElement()
       ..autoplay = true
-      ..width = 320
-      ..height = 240
-      ..style.width = '320px'
-      ..style.height = '240px';
+      ..width = 500
+      ..height = 300
+      ..style.width = '500px'
+      ..style.height = '300px';
 
     // Registra o vídeo para ser exibido no Flutter
     ui.platformViewRegistry.registerViewFactory(
       'webcam-video',
       (int viewId) => _video!,
     );
-
+    travarOpcoes = true;
     setState(() {});
 
     _mediaStream = await html.window.navigator.mediaDevices!.getUserMedia({'video': true});
@@ -139,7 +153,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
         'POST',
         Uri.parse('http://localhost:5000/verificar'),
       )
-        ..fields['id_disciplina'] = disciplinaSelecionada!.idDisciplina
+        ..fields['id_disciplina'] = professorSelecionado!.idDisciplina
         ..files.add(http.MultipartFile.fromBytes(
           'imagem',
           frame,
@@ -155,32 +169,92 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
         final nomeAluno = data['aluno'] ?? 'Desconhecido';
         final verificado = data['verificado'] ?? false;
         if(verificado){
-          registrarPresenca(data);
+          int diferenca = await verificarDiferencaUltimaPresenca(data['aluno_id']);
+          if(diferenca>=10){
+            String situacao = await obterProximaSituacao(data['aluno_id']);
+            registrarPresenca(data,situacao);
+          }
         }
-        
-        return verificado?'Presença Confirmada aluno(a): $nomeAluno':'Aluno não encontrado';
+        return '';
       } else {
-        return 'Erro na comparação: $body';
+        print('Erro na comparação: $body');
+        return '';
       }
     } catch (e) {
-      return 'Erro na requisição: $e';
+      print('Erro na requisição: $e');
+      return '';
     }
   }
-  
-  registrarPresenca(Map resposta){
+
+  Future<String> obterProximaSituacao(String alunoId) async {
+    final agora = DateTime.now();
+    final inicioDoDia = DateTime(agora.year, agora.month, agora.day);
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('presencas')
+        .where('alunoId', isEqualTo: alunoId)
+        .where('dataHora', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
+        .orderBy('dataHora', descending: true)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) {
+      return 'ENTRADA 1';
+    }
+
+    final ultimo = snapshot.docs.first;
+    final String ultimaSituacao = ultimo['situacao'];
+
+    final partes = ultimaSituacao.split(' ');
+    final tipo = partes[0]; // "ENTRADA" ou "SAIDA"
+    final numero = int.tryParse(partes[1]) ?? 1;
+
+    if (tipo == 'ENTRADA') {
+      return 'SAIDA $numero';
+    } else {
+      return 'ENTRADA ${numero + 1}';
+    }
+  }
+
+  registrarPresenca(Map resposta, String situacao){
     final docRef = FirebaseFirestore.instance.collection('presencas').doc();
     FirebaseFirestore.instance.collection('presencas').doc(docRef.id).set({
       'idPresenca'    : docRef.id,
-      'idDisciplina'  : disciplinaSelecionada!.idDisciplina,
-      'nomeDisciplina': disciplinaSelecionada!.nomeDisciplina,
+      'idDisciplina'  : professorSelecionado!.idDisciplina,
+      'nomeDisciplina': professorSelecionado!.nomeDisciplina,
       'idEscola'      : escolaSelecionada!.idEscola,
       'nomeEscola'    : escolaSelecionada!.nome,
+      'idProfessor'   : professorSelecionado!.idProf,
+      'nomeProfessor' : professorSelecionado!.nomeProf,
       'nomeAluno'     : resposta['aluno'],
       'alunoId'       : resposta['aluno_id'],
       'dataHora'      : DateTime.now(),
-      'situacao'      : 'entrada1'
+      'situacao'      : situacao
     });
-    showSnackBar(context, 'Presença Registrada', Colors.green);
+    showSnackBar(context, 'Presença Registrada para o(a) aluno(a) ${resposta['aluno']}', Colors.green);
+  }
+
+  Future<int> verificarDiferencaUltimaPresenca(String alunoId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('presencas')
+        .where('alunoId', isEqualTo: alunoId)
+        .orderBy('dataHora', descending: true)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) {
+      print('Nenhum registro encontrado para o aluno.');
+      return 10;
+    }
+
+    final ultimoRegistro = snapshot.docs.first;
+    final Timestamp timestamp = ultimoRegistro['dataHora'];
+    final DateTime dataUltimaPresenca = timestamp.toDate();
+    final DateTime agora = DateTime.now();
+
+    int difMinutos = agora.difference(dataUltimaPresenca).inMinutes;
+    print('Diferença: ${difMinutos} minutos');
+    return difMinutos;
   }
 
   @override
@@ -194,7 +268,6 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     _mediaStream?.getTracks().forEach((t) => t.stop());
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -225,10 +298,10 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                       lista: escolasLista,
                       largura: 400,
                       larguraContainer: 300,
-                      onChanged: (valor){
+                      onChanged: travarOpcoes?null:(valor){
                         escolaSelecionada = valor;
                         setState(() {});
-                        carregarDisciplinas(escolaSelecionada!.idEscola);
+                        carregarProfessores(escolaSelecionada!.idEscola);
                       },
                     ),
                   ),
@@ -236,20 +309,28 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                   Container(
                     width: 350,
                     alignment: Alignment.center,
-                    child: DropdownDisciplinas(
-                      selecionado: disciplinaSelecionada,
-                      titulo: 'Disciplina *',
-                      hint: 'Selecione uma disciplina',
-                      lista: disciplinasBanco,
+                    child: DropdownProfessores(
+                      selecionado: professorSelecionado,
+                      titulo: 'Professores *',
+                      hint: 'Selecione um(a) professor(a)',
+                      lista: professoresLista,
                       largura: 400,
                       larguraContainer: 300,
-                      onChanged: (valor){
-                        disciplinaSelecionada = valor;
+                      onChanged: travarOpcoes?null:(valor){
+                        professorSelecionado = valor;
                         setState(() {});
                       },
                     ),
                   ),
-                  disciplinaSelecionada!=null && escolaSelecionada!=null?Center(
+                  professorSelecionado == null?Container():Container(
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: TextoPadrao(
+                      texto: 'DISCIPLINA: ${professorSelecionado!.nomeDisciplina}',
+                      corTexto: Cores.corPrincipal,
+                      textAling: TextAlign.start,
+                    ),
+                  ),
+                  professorSelecionado!=null && escolaSelecionada!=null?Center(
                     child: BotaoPadrao(
                       titulo: 'Abrir Camera',
                       largura: 250,
@@ -258,13 +339,12 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                       }
                     ),
                   ):Container(),
-                  const Text('Vídeo da webcam:'),
                   SizedBox(
-                    width: 320,
-                    height: 240,
+                    width: 500,
+                    height: 300,
                     child: _video != null
                         ? const HtmlElementView(viewType: 'webcam-video')
-                        : const Center(child: Text('Webcam não iniciada')),
+                        : Container(),
                   ),
                   const SizedBox(height: 20),
                   aguardando?
@@ -275,7 +355,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                           TextoPadrao(texto: 'Verificando...',corTexto: Cores.corPrincipal,)
                         ],
                       ):
-                      Text('Resultado: $_resultado',
+                      Text('$_resultado',
                         style: TextStyle(
                             color: _resultado!.contains('Confirmada') ? Colors.green : Colors.red,
                             fontWeight: FontWeight.bold,
