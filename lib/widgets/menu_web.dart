@@ -1,10 +1,10 @@
 import 'package:controle_chamada_quadritech/telas/chamadas_tela.dart';
 import 'package:controle_chamada_quadritech/widgets/logo_home.dart';
 import 'package:flutter/material.dart';
-import '../telas/cadastro_alunos_tela.dart';
-import '../telas/cadastro_disciplinas_tela.dart';
-import '../telas/cadastro_escolas_tela.dart';
-import '../telas/cadastro_professores_tela.dart';
+import '../telas/alunos_tela.dart';
+import '../telas/disciplinas_tela.dart';
+import '../telas/escolas_tela.dart';
+import '../telas/professores_tela.dart';
 import '../telas/login_tela.dart';
 import 'item_menu.dart';
 
@@ -24,19 +24,19 @@ class MenuWeb extends StatelessWidget {
             Spacer(),
             ItemMenu(
               texto: 'ESCOLAS',
-              destino: CadastroEscolasTela(),
+              destino: EscolasTela(),
             ),
             ItemMenu(
               texto: 'DISCIPLINAS',
-              destino: CadastroDisciplinasTela(),
+              destino: DisciplinasTela(),
             ),
             ItemMenu(
               texto: 'PROFESSORES',
-              destino: CadastroProfessoresTela(),
+              destino: ProfessoresTela(),
             ),
             ItemMenu(
               texto: 'ALUNOS',
-              destino: CadastroAlunosTela(),
+              destino: AlunosTela(),
             ),
             ItemMenu(
               texto: 'CHAMADAS',

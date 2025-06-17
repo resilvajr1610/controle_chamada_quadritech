@@ -18,14 +18,14 @@ import '../widgets/texto_padrao.dart';
 import 'package:brasil_fields/brasil_fields.dart';
 import 'dart:html' as html;
 
-class CadastroAlunosTela extends StatefulWidget {
-  const CadastroAlunosTela({super.key});
+class AlunosTela extends StatefulWidget {
+  const AlunosTela({super.key});
 
   @override
-  State<CadastroAlunosTela> createState() => _CadastroAlunosTelaState();
+  State<AlunosTela> createState() => _AlunosTelaState();
 }
 
-class _CadastroAlunosTelaState extends State<CadastroAlunosTela> {
+class _AlunosTelaState extends State<AlunosTela> {
 
   bool salvando = false;
   bool exibirCampos = false;

@@ -10,14 +10,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:brasil_fields/brasil_fields.dart';
 import 'package:flutter/services.dart';
 
-class CadastroEscolasTela extends StatefulWidget {
-  const CadastroEscolasTela({super.key});
+class EscolasTela extends StatefulWidget {
+  const EscolasTela({super.key});
 
   @override
-  State<CadastroEscolasTela> createState() => _CadastroEscolasTelaState();
+  State<EscolasTela> createState() => _EscolasTelaState();
 }
 
-class _CadastroEscolasTelaState extends State<CadastroEscolasTela> {
+class _EscolasTelaState extends State<EscolasTela> {
 
   TextEditingController nome = TextEditingController();
   TextEditingController endereco = TextEditingController();

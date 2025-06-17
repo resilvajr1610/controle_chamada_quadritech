@@ -22,7 +22,7 @@ dev_dependencies:
   firebase_auth:
   brasil_fields:
   firebase_storage:
-  face_detection_web:
+  multi_select_flutter: ^4.1.2
 
 flutter:
 

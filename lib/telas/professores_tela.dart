@@ -1,10 +1,10 @@
 import 'package:controle_chamada_quadritech/modelo/professor_modelo.dart';
-import 'package:controle_chamada_quadritech/widgets/dropdown_disciplinas.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import '../modelo/cores.dart';
 import '../modelo/disciplina_modelo.dart';
+import '../modelo/disciplina_professor_modelo.dart';
 import '../modelo/escola_modelo.dart';
 import '../widgets/botao_padrao.dart';
 import '../widgets/dropdown_escolas.dart';
@@ -13,15 +13,16 @@ import '../widgets/menu_web.dart';
 import '../widgets/snackbar.dart';
 import '../widgets/texto_padrao.dart';
 import 'package:brasil_fields/brasil_fields.dart';
+import 'package:multi_select_flutter/multi_select_flutter.dart';
 
-class CadastroProfessoresTela extends StatefulWidget {
-  const CadastroProfessoresTela({super.key});
+class ProfessoresTela extends StatefulWidget {
+  const ProfessoresTela({super.key});
 
   @override
-  State<CadastroProfessoresTela> createState() => _CadastroProfessoresTelaState();
+  State<ProfessoresTela> createState() => _ProfessoresTelaState();
 }
 
-class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
+class _ProfessoresTelaState extends State<ProfessoresTela> {
 
   TextEditingController nome = TextEditingController();
   TextEditingController ensino = TextEditingController();
@@ -39,13 +40,14 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
   TextEditingController pesquisar = TextEditingController();
   bool salvando = false;
   bool exibirCampos = false;
-  List<DisciplinaModelo> disciplinasListaCadastro = [];
+  List<DisciplinaProfessorModelo> disciplinasBanco = [];
   List<EscolaModelo> escolasLista = [];
   List<ProfessorModelo> professoresLista = [];
   EscolaModelo? escolaSelecionadaPesquisa;
   EscolaModelo? escolaSelecionadaCadastro;
-  DisciplinaModelo? disciplinaSelecionadaCadastro;
+  List disciplinasSelecionadas = [];
   String idProfessor = '';
+  List<MultiSelectItem> disciplinaMultiple = [];
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -72,42 +74,28 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
     });
   }
 
-  carregarDisciplinasCadastro({ProfessorModelo? professor}){
-    disciplinasListaCadastro.clear();
-    disciplinaSelecionadaCadastro = null;
-    setState(() {});
-    print('aqui');
-    FirebaseFirestore.instance.collection('disciplinas')
-        .where('idEscola',isEqualTo:escolaSelecionadaCadastro!.idEscola).get().then((disciplinasDoc){
-      for(int i = 0; disciplinasDoc.docs.length > i;i++){
-        disciplinasListaCadastro.add(
-            DisciplinaModelo(
-              idEscola: disciplinasDoc.docs[i]['idEscola'],
-              nomeEscola: disciplinasDoc.docs[i]['nomeEscola'],
-              idDisciplina: disciplinasDoc.docs[i].id,
-              nomeDisciplina: disciplinasDoc.docs[i]['nomeDisciplina'],
-              ensino: disciplinasDoc.docs[i]['ensino'],
-              ano: disciplinasDoc.docs[i]['ano'],
-              curso: disciplinasDoc.docs[i]['curso'],
-            )
+  carregarDisciplinasEscola(String idEscola){
+    FirebaseFirestore.instance.collection('disciplinas').where('idEscola',isEqualTo: idEscola).get().then((disciplinasDoc) {
+      List disciplinas = [];
+      disciplinasDoc.docs.forEach((doc) {
+        disciplinas.add(doc['nomeDisciplina']);
+        disciplinasBanco.add(
+            DisciplinaProfessorModelo(
+              idEscola: doc['idEscola'],
+              nomeEscola: doc['nomeEscola'],
+              idDisciplina: doc.id,
+              nomeDisciplina: doc['nomeDisciplina'],
+          )
         );
-        if(idProfessor.isNotEmpty){
-          if(disciplinasListaCadastro[i].idDisciplina == professor!.idDisciplina){
-            disciplinaSelecionadaCadastro = disciplinasListaCadastro[i];
-          }
-        }
-      }
-      if(disciplinasListaCadastro.isEmpty){
-        showSnackBar(context, 'Nenhuma disciplina cadastrada nessa escola', Cores.erro);
-      }
-      print('disci ${disciplinasListaCadastro.length}');
+      });
+      disciplinaMultiple =disciplinas.map((e) => MultiSelectItem(e, e.toString())).toList();
       setState(() {});
     });
   }
 
   verificarCampos(){
     if(escolaSelecionadaCadastro!=null){
-      if(disciplinaSelecionadaCadastro!=null){
+      if(disciplinasSelecionadas.isNotEmpty){
         if(nome.text.length>5){
           if(curso.text.length>2){
             if(ano.text.length==4){
@@ -158,7 +146,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
           showSnackBar(context, 'Nome Incompleto', Cores.erro);
         }
       }else{
-        showSnackBar(context, 'Selecione uma disciplina', Cores.erro);
+        showSnackBar(context, 'Selecione pelo menos uma disciplina', Cores.erro);
       }
     }else{
       showSnackBar(context, 'Selecione uma escola', Cores.erro);
@@ -168,15 +156,20 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
   salvarProfessor(){
     salvando = true;
     setState(() {});
+    List idDisciplinas = [];
 
+    for(int i =0; disciplinasBanco.length>i;i++){
+      if(disciplinasSelecionadas.contains(disciplinasBanco[i].nomeDisciplina)){
+        idDisciplinas.add(disciplinasBanco[i].idDisciplina);
+      }
+    }
     final docRef = FirebaseFirestore.instance.collection('professores').doc();
     FirebaseFirestore.instance.collection('professores').doc(docRef.id).set({
       'idProf'        : docRef.id,
       'nomeProf'      : nome.text.toUpperCase(),
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
-      'idDisciplina'  : disciplinaSelecionadaCadastro!.idDisciplina,
-      'nomeDisciplina': disciplinaSelecionadaCadastro!.nomeDisciplina,
+      'idDisciplinas' : idDisciplinas,
       'bairro'        : bairro.text.toUpperCase(),
       'cep'           : cep.text,
       'cidade'        : cidade.text.toUpperCase(),
@@ -192,7 +185,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
       'status'          : 'ativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
-      disciplinaSelecionadaCadastro = null;
+      disciplinasSelecionadas = [];
       nome.clear();
       estadoCivil.clear();
       idade.clear();
@@ -215,13 +208,20 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
   editarProfessor(){
     salvando = true;
     setState(() {});
+    List idDisciplinas = [];
+    for(int i =0; disciplinasBanco.length>i;i++){
+      if(disciplinasSelecionadas.contains(disciplinasBanco[i].nomeDisciplina)){
+        idDisciplinas.add(disciplinasBanco[i].idDisciplina);
+      }
+    }
+    List aux = idDisciplinas.toSet().toList();
+    idDisciplinas = aux;
 
     FirebaseFirestore.instance.collection('professores').doc(idProfessor).update({
       'nomeProf'      : nome.text.toUpperCase(),
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
-      'idDisciplina'  : disciplinaSelecionadaCadastro!.idDisciplina,
-      'nomeDisciplina': disciplinaSelecionadaCadastro!.nomeDisciplina,
+      'idDisciplinas' : idDisciplinas,
       'bairro'        : bairro.text.toUpperCase(),
       'cep'           : cep.text,
       'cidade'        : cidade.text.toUpperCase(),
@@ -236,7 +236,8 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
       'estadoCivil'   : estadoCivil.text.toUpperCase(),
     }).then((_){
       escolaSelecionadaCadastro = null;
-      disciplinaSelecionadaCadastro = null;
+      escolaSelecionadaPesquisa = null;
+      disciplinasSelecionadas = [];
       nome.clear();
       estadoCivil.clear();
       idade.clear();
@@ -277,7 +278,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                   nomeEscola: professoresDoc.docs[i]['nomeEscola'],
                   idProf: professoresDoc.docs[i].id,
                   nomeProf: professoresDoc.docs[i]['nomeProf'],
-                  idDisciplina:  professoresDoc.docs[i]['idDisciplina'],
+                  idDisciplinas: professoresDoc.docs[i]['idDisciplinas'],
                   cep:  professoresDoc.docs[i]['cep'],
                   formacao:  professoresDoc.docs[i]['formacao'],
                   cidade:  professoresDoc.docs[i]['cidade'],
@@ -287,7 +288,6 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                   numeroRegistro:  professoresDoc.docs[i]['numeroRegistro'],
                   estadoCivil:  professoresDoc.docs[i]['estadoCivil'],
                   idade:  professoresDoc.docs[i]['idade'],
-                  nomeDisciplina: professoresDoc.docs[i]['nomeDisciplina'],
                   curso: professoresDoc.docs[i]['curso'],
                   ano: professoresDoc.docs[i]['ano'],
                   ensino: professoresDoc.docs[i]['ensino'],
@@ -324,15 +324,25 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
     ensino.text = professor.ensino;
     curso.text = professor.curso;
     ano.text = professor.ano.toString();
+    List idsDisciplinas = professor.idDisciplinas;
     exibirCampos = true;
     professoresLista.clear();
     for(int i = 0; escolasLista.length>i; i++){
       if(professor.idEscola == escolasLista[i].idEscola){
         escolaSelecionadaCadastro = escolasLista[i];
-        carregarDisciplinasCadastro(professor: professor);
         break;
       }
     }
+    for (var disciplina in disciplinasBanco) {
+      for (var id in idsDisciplinas) {
+        if (disciplina.idDisciplina == id) {
+          disciplinasSelecionadas.add(disciplina.nomeDisciplina);
+        }
+      }
+    }
+    List aux = disciplinasSelecionadas.toSet().toList();
+    disciplinasSelecionadas = aux;
+    print('disciplinas professor: $disciplinasSelecionadas');
     setState(() {});
   }
 
@@ -377,7 +387,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
       'status' : 'inativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
-      disciplinaSelecionadaCadastro = null;
+      disciplinasSelecionadas = [];
       nome.clear();
       estadoCivil.clear();
       idade.clear();
@@ -409,7 +419,6 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
   Widget build(BuildContext context) {
 
     double altura = MediaQuery.of(context).size.height;
-    double largura = MediaQuery.of(context).size.width;
 
     return Scaffold(
         appBar: AppBar(
@@ -453,6 +462,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                               onChanged: (valor){
                                 escolaSelecionadaPesquisa = valor;
                                 pesquisar.clear();
+                                carregarDisciplinasEscola(escolaSelecionadaPesquisa!.idEscola);
                                 setState(() {});
                               },
                             ),
@@ -513,7 +523,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                           }
                       ),
                     ):Container(
-                      height: 750,
+                      height: 755,
                       width: 450,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
@@ -522,6 +532,7 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                             width: 500,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
                                   width: 250,
@@ -535,25 +546,47 @@ class _CadastroProfessoresTelaState extends State<CadastroProfessoresTela> {
                                     onChanged: (valor){
                                       escolaSelecionadaCadastro = valor;
                                       setState(() {});
-                                      carregarDisciplinasCadastro();
+                                      carregarDisciplinasEscola(escolaSelecionadaCadastro!.idEscola);
                                     },
                                   ),
                                 ),
-                                Container(
-                                  width: 240,
-                                  child: DropdownDisciplinas(
-                                    selecionado: disciplinaSelecionadaCadastro,
-                                    titulo: 'Disciplina *',
-                                    hint: 'Selecione uma disciplina',
-                                    lista: disciplinasListaCadastro,
-                                    largura: 240,
-                                    larguraContainer: 100,
-                                    onChanged: (valor){
-                                      disciplinaSelecionadaCadastro = valor;
-                                      setState(() {});
-                                    },
+                                disciplinaMultiple.isEmpty?Container():Container(
+                                  height: disciplinasSelecionadas.isEmpty?80:130,
+                                  width: 250,
+                                  alignment:Alignment.bottomCenter,
+                                  child: ListView(
+                                    children: [
+                                      TextoPadrao(texto: 'Disciplinas *',tamanhoTexto: 18,corTexto: Cores.corPrincipal,),
+                                      MultiSelectDialogField(
+                                        items: disciplinaMultiple,
+                                        initialValue: disciplinasSelecionadas,
+                                        title: Text("Disciplinas",style: TextStyle(color: Cores.corPrincipal),),
+                                        selectedColor: Cores.corPrincipal,
+                                        dialogHeight: altura*0.5,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[300],
+                                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                                          border: Border.all(
+                                            color: Colors.grey.withOpacity(0.0),
+                                            width: 0,
+                                          ),
+                                        ),
+                                        buttonText: Text(
+                                          "Selecione a(s) disciplina(s)",
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        onConfirm: (results) {
+                                          disciplinasSelecionadas.clear();
+                                          disciplinasSelecionadas = results;
+                                          setState(() {});
+                                        },
+                                      ),
+                                    ],
                                   ),
-                                ),
+                                )
                               ],
                             ),
                           ),

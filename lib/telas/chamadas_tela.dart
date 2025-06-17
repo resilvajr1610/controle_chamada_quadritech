@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:controle_chamada_quadritech/modelo/aluno_chamada_modelo.dart';
 import 'package:controle_chamada_quadritech/modelo/chamada_modelo.dart';
 import 'package:controle_chamada_quadritech/modelo/converter_data_modelo.dart';
@@ -9,10 +11,12 @@ import 'package:flutter/services.dart';
 import '../modelo/cores.dart';
 import '../modelo/escola_modelo.dart';
 import '../modelo/professor_chamada_modelo.dart';
+import '../widgets/calendario_data.dart';
 import '../widgets/dropdown_escolas.dart';
 import '../widgets/menu_web.dart';
 import '../widgets/snackbar.dart';
 import '../widgets/texto_padrao.dart';
+import 'package:intl/intl.dart';
 
 class ChamadasTela extends StatefulWidget {
   const ChamadasTela({super.key});
@@ -31,6 +35,7 @@ class _ChamadasTelaState extends State<ChamadasTela> {
   ProfessorChamadaModelo? professorSelecionado;
   List<AlunoChamadaModelo> alunosBanco = [];
   AlunoChamadaModelo? alunoSelecionado;
+  TextEditingController calendario = TextEditingController();
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -100,7 +105,6 @@ class _ChamadasTelaState extends State<ChamadasTela> {
           .where('idDisciplina',isEqualTo: professorSelecionado!.idDisciplina)
           .orderBy('dataHora').get().then((chamadasDoc){
 
-
         List idsAlunos = [];
         for(int i = 0; chamadasDoc.docs.length > i;i++){
           alunosListaTodas.add(
@@ -146,6 +150,103 @@ class _ChamadasTelaState extends State<ChamadasTela> {
       }
     }
     setState(() {});
+  }
+
+  escolherData(BuildContext context) async {
+    var pickDate = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now(),
+        firstDate: DateTime(2025),
+        lastDate: DateTime.now()
+    );
+    if (pickDate != null) {
+      calendario.text = formatData(year: pickDate.year, month: pickDate.month, day: pickDate.day);
+      if(alunoSelecionado==null){
+        buscarPresencasDeData(pickDate);
+      }else{
+        buscarPresencasDataAluno(pickDate);
+      }
+      setState(() {});
+    }
+  }
+
+  String formatData({int? year, int? month, int? day}) {
+    DateTime data = DateTime(year!, month!, day!);
+    String formattedDate = DateFormat('dd/MM/yyyy').format(data);
+    return formattedDate;
+  }
+
+  buscarPresencasDeData(DateTime data) async {
+    final inicioDoDia = DateTime(data.year, data.month, data.day);
+    final fimDoDia = inicioDoDia.add(const Duration(days: 1));
+    alunosListaFiltrada.clear();
+
+    await FirebaseFirestore.instance
+        .collection('presencas')
+        .where('dataHora', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
+        .where('dataHora', isLessThan: Timestamp.fromDate(fimDoDia))
+        .orderBy('dataHora')
+        .get().then((chamadasDoc){
+          print('chamadas: ${chamadasDoc.docs.length}');
+      for(int i = 0; chamadasDoc.docs.length > i;i++){
+        alunosListaFiltrada.add(
+            ChamadaModelo(
+              idPresenca: chamadasDoc.docs[i].id,
+              idEscola: chamadasDoc.docs[i]['idEscola'],
+              nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
+              idAluno: chamadasDoc.docs[i]['alunoId'],
+              nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
+              idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
+              nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
+              dataHora: chamadasDoc.docs[i]['dataHora'],
+              situacao: chamadasDoc.docs[i]['situacao'],
+            )
+        );
+      }
+      if(alunosListaTodas.isEmpty){
+        showSnackBar(context, 'Nenhum(a) chamada encontrada', Cores.erro);
+      }
+      setState(() {});
+    });
+
+  }
+
+  buscarPresencasDataAluno(DateTime data) async {
+    final inicioDoDia = DateTime(data.year, data.month, data.day);
+    final fimDoDia = inicioDoDia.add(const Duration(days: 1));
+    alunosListaFiltrada.clear();
+
+    print(alunoSelecionado!.nomeAluno);
+
+    await FirebaseFirestore.instance
+        .collection('presencas')
+        .where('dataHora', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
+        .where('dataHora', isLessThan: Timestamp.fromDate(fimDoDia))
+        .where('alunoId',isEqualTo: alunoSelecionado!.idAluno)
+        .orderBy('dataHora')
+        .get().then((chamadasDoc){
+      print('chamadas: ${chamadasDoc.docs.length}');
+      for(int i = 0; chamadasDoc.docs.length > i;i++){
+        alunosListaFiltrada.add(
+            ChamadaModelo(
+              idPresenca: chamadasDoc.docs[i].id,
+              idEscola: chamadasDoc.docs[i]['idEscola'],
+              nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
+              idAluno: chamadasDoc.docs[i]['alunoId'],
+              nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
+              idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
+              nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
+              dataHora: chamadasDoc.docs[i]['dataHora'],
+              situacao: chamadasDoc.docs[i]['situacao'],
+            )
+        );
+      }
+      if(alunosListaFiltrada.isEmpty){
+        showSnackBar(context, 'Nenhum(a) chamada encontrada', Cores.erro);
+      }
+      setState(() {});
+    });
+
   }
 
   @override
@@ -207,25 +308,48 @@ class _ChamadasTelaState extends State<ChamadasTela> {
                               larguraContainer: 300,
                               onChanged: (valor){
                                 professorSelecionado = valor;
+                                alunoSelecionado = null;
+                                calendario.clear();
                                 carregarPresencas();
                                 setState(() {});
                               },
                             ),
                           ),
-                          Container(
-                            width: 350,
-                            child: DropdownAlunoChamada(
-                              selecionado: alunoSelecionado,
-                              titulo: 'Alunos',
-                              lista: alunosBanco,
-                              largura: 400,
-                              larguraContainer: 300,
-                              onChanged: (valor){
-                                alunoSelecionado = valor;
-                                filtrarAlunos(alunoSelecionado!.idAluno);
-                                setState(() {});
-                              },
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 350,
+                                child: DropdownAlunoChamada(
+                                  selecionado: alunoSelecionado,
+                                  titulo: 'Alunos',
+                                  lista: alunosBanco,
+                                  largura: 400,
+                                  larguraContainer: 300,
+                                  onChanged: (valor){
+                                    alunoSelecionado = valor;
+                                    if(calendario.text.length!=10){
+                                      filtrarAlunos(alunoSelecionado!.idAluno);
+                                    }else{
+                                      List data = calendario.text.split('/');
+                                      print(data);
+                                      if(data.length==3){
+                                        DateTime dateTime = DateTime(int.parse(data[2]),int.parse(data[1]),int.parse(data[0]));
+                                        buscarPresencasDataAluno(dateTime);
+                                      }
+                                    }
+                                    setState(() {});
+                                  },
+                                ),
+                              ),
+                              escolaSelecionadaPesquisa ==null && professorSelecionado == null?Container():CalendarioData(
+                                controller: calendario,
+                                validaData: true,
+                                funcaoBotao: ()=>escolherData(context),
+                                titulo: 'Data',
+                                msgErro: '',
+                                onChanged: (valor){},
+                              )
+                            ],
                           ),
                           professorSelecionado==null?Container():TextoPadrao(
                             texto: 'DISCIPLINA: ${professorSelecionado!.nomeDisciplina}',

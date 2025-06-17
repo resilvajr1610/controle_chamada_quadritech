@@ -3,8 +3,7 @@ class ProfessorModelo {
   String nomeProf;
   String idEscola;
   String nomeEscola;
-  String idDisciplina;
-  String nomeDisciplina;
+  List idDisciplinas;
   String bairro;
   String cep;
   String cidade;
@@ -34,8 +33,7 @@ class ProfessorModelo {
     required this.estadoCivil,
     required this.curso,
     required this.ano,
-    required this.idDisciplina,
-    required this.nomeDisciplina,
+    required this.idDisciplinas,
     required this.formacao,
   });
 }

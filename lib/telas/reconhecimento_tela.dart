@@ -84,8 +84,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
               nomeProf: professoresDoc.docs[i]['nomeProf'],
               idEscola: professoresDoc.docs[i]['idEscola'],
               nomeEscola: professoresDoc.docs[i]['nomeEscola'],
-              idDisciplina: professoresDoc.docs[i]['idDisciplina'],
-              nomeDisciplina: professoresDoc.docs[i]['nomeDisciplina'],
+              idDisciplinas: professoresDoc.docs[i]['idDisciplinas'],
               ensino: '',
               ano: 0,
               curso: professoresDoc.docs[i]['curso'],
@@ -151,9 +150,11 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://localhost:5000/verificar'),
+        // Uri.parse('http://localhost:5000/verificar'),
+        // Uri.parse('http://52.72.158.131:5000/verificar'),
+        Uri.parse('http://54.83.152.11:5000/verificar'),
       )
-        ..fields['id_disciplina'] = professorSelecionado!.idDisciplina
+        // ..fields['id_disciplina'] = professorSelecionado!.idDisciplina
         ..files.add(http.MultipartFile.fromBytes(
           'imagem',
           frame,
@@ -163,10 +164,9 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
 
       final response = await request.send();
       final body = await response.stream.bytesToString();
-      
+
       if (response.statusCode == 200) {
         final data = jsonDecode(body);
-        final nomeAluno = data['aluno'] ?? 'Desconhecido';
         final verificado = data['verificado'] ?? false;
         if(verificado){
           int diferenca = await verificarDiferencaUltimaPresenca(data['aluno_id']);
@@ -174,6 +174,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
             String situacao = await obterProximaSituacao(data['aluno_id']);
             registrarPresenca(data,situacao);
           }
+        }else{
+          showSnackBar(context, 'Aluno(a) não reconhecido', Colors.red);
         }
         return '';
       } else {
@@ -220,8 +222,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     final docRef = FirebaseFirestore.instance.collection('presencas').doc();
     FirebaseFirestore.instance.collection('presencas').doc(docRef.id).set({
       'idPresenca'    : docRef.id,
-      'idDisciplina'  : professorSelecionado!.idDisciplina,
-      'nomeDisciplina': professorSelecionado!.nomeDisciplina,
+      'idDisciplina'  : professorSelecionado!.idDisciplinas,
+      // 'nomeDisciplina': professorSelecionado!.nomeDisciplina,
       'idEscola'      : escolaSelecionada!.idEscola,
       'nomeEscola'    : escolaSelecionada!.nome,
       'idProfessor'   : professorSelecionado!.idProf,
@@ -325,7 +327,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                   professorSelecionado == null?Container():Container(
                     padding: EdgeInsets.symmetric(horizontal: 10),
                     child: TextoPadrao(
-                      texto: 'DISCIPLINA: ${professorSelecionado!.nomeDisciplina}',
+                      texto: 'DISCIPLINA: ${professorSelecionado!.nomeProf}',
                       corTexto: Cores.corPrincipal,
                       textAling: TextAlign.start,
                     ),

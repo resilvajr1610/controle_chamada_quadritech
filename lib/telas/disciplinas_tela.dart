@@ -11,14 +11,14 @@ import '../widgets/snackbar.dart';
 import '../widgets/texto_padrao.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class CadastroDisciplinasTela extends StatefulWidget {
-  const CadastroDisciplinasTela({super.key});
+class DisciplinasTela extends StatefulWidget {
+  const DisciplinasTela({super.key});
 
   @override
-  State<CadastroDisciplinasTela> createState() => _CadastroDisciplinasTelaState();
+  State<DisciplinasTela> createState() => _DisciplinasTelaState();
 }
 
-class _CadastroDisciplinasTelaState extends State<CadastroDisciplinasTela> {
+class _DisciplinasTelaState extends State<DisciplinasTela> {
 
   TextEditingController nome = TextEditingController();
   TextEditingController ensino = TextEditingController();
