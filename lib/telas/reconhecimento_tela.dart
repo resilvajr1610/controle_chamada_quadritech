@@ -31,8 +31,10 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
 
   List<EscolaModelo> escolasLista = [];
   List<ProfessorModelo> professoresLista = [];
+  List<DisciplinaModelo> disciplinasLista = [];
   EscolaModelo? escolaSelecionada;
   ProfessorModelo? professorSelecionado;
+  DisciplinaModelo? disciplinaSelecionada;
   html.VideoElement? _video;
   html.MediaStream? _mediaStream;
   Timer? _timer;
@@ -104,14 +106,43 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     });
   }
 
+  buscarDisciplinas(String idEscola, List idDisciplinas){
+    FirebaseFirestore.instance.collection('disciplinas')
+        .where('idEscola',isEqualTo: idEscola)
+        .where('status',isNotEqualTo: 'inativo')
+        .orderBy('nomeDisciplina').get().then((escolasDoc){
+
+      for(int i = 0; escolasDoc.docs.length > i;i++){
+       if(idDisciplinas.contains(escolasDoc.docs[i].id)){
+         disciplinasLista.add(
+             DisciplinaModelo(
+               idEscola: escolasDoc.docs[i]['idEscola'],
+               nomeEscola: escolasDoc.docs[i]['nomeEscola'],
+               idDisciplina: escolasDoc.docs[i].id,
+               nomeDisciplina: escolasDoc.docs[i]['nomeDisciplina'],
+               curso: escolasDoc.docs[i]['curso'],
+               ano: escolasDoc.docs[i]['ano'],
+               ensino: escolasDoc.docs[i]['ensino'],
+             )
+         );
+       }
+      }
+      if(disciplinasLista.isEmpty){
+        showSnackBar(context, 'Nenhuma disciplina encontrada', Cores.erro);
+      }
+      setState(() {});
+    });
+    setState(() {});
+  }
+
   Future<void> iniciarCamera() async {
     if (_video != null) return;
 
     _video = html.VideoElement()
       ..autoplay = true
-      ..width = 500
+      ..width = 390
       ..height = 300
-      ..style.width = '500px'
+      ..style.width = '390px'
       ..style.height = '300px';
 
     // Registra o vídeo para ser exibido no Flutter
@@ -125,20 +156,26 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     _mediaStream = await html.window.navigator.mediaDevices!.getUserMedia({'video': true});
 
     _video!.srcObject = _mediaStream;
-    final canvas = html.CanvasElement(width: 640, height: 480);
+    final canvas = html.CanvasElement(width: 390, height: 300);
 
     Timer.periodic(const Duration(seconds: 5), (_) async {
       aguardando = true;
+      if (!mounted) return;
       setState(() {});
+
       final context = canvas.context2D;
       context.drawImage(_video!, 0, 0);
       final blob = await canvas.toBlob('image/jpeg');
       final reader = html.FileReader();
       reader.readAsArrayBuffer(blob!);
       await reader.onLoadEnd.first;
+
       final frame = reader.result as Uint8List;
+
       if(_video!=null){
         _resultado = await comparar(frame);
+        if (!mounted) return;
+
         aguardando = false;
         setState(() {});
         print('resultado: $_resultado');
@@ -150,11 +187,10 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        // Uri.parse('http://localhost:5000/verificar'),
-        // Uri.parse('http://52.72.158.131:5000/verificar'),
-        Uri.parse('http://54.83.152.11:5000/verificar'),
+        Uri.parse('http://localhost:5000/verificar'),
+        // Uri.parse('http://54.83.152.11:5000/verificar'),
       )
-        // ..fields['id_disciplina'] = professorSelecionado!.idDisciplina
+        ..fields['id_disciplina'] = disciplinaSelecionada!.idDisciplina
         ..files.add(http.MultipartFile.fromBytes(
           'imagem',
           frame,
@@ -164,6 +200,9 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
 
       final response = await request.send();
       final body = await response.stream.bytesToString();
+
+      print(response.statusCode);
+      print(body);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(body);
@@ -222,8 +261,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     final docRef = FirebaseFirestore.instance.collection('presencas').doc();
     FirebaseFirestore.instance.collection('presencas').doc(docRef.id).set({
       'idPresenca'    : docRef.id,
-      'idDisciplina'  : professorSelecionado!.idDisciplinas,
-      // 'nomeDisciplina': professorSelecionado!.nomeDisciplina,
+      'idDisciplina'  : disciplinaSelecionada!.idDisciplina,
+      'nomeDisciplina': disciplinaSelecionada!.nomeDisciplina,
       'idEscola'      : escolaSelecionada!.idEscola,
       'nomeEscola'    : escolaSelecionada!.nome,
       'idProfessor'   : professorSelecionado!.idProf,
@@ -245,7 +284,6 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
         .get();
 
     if (snapshot.docs.isEmpty) {
-      print('Nenhum registro encontrado para o aluno.');
       return 10;
     }
 
@@ -289,14 +327,14 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
               height: altura*0.8,
               width: 390,
               alignment: Alignment.center,
-              child: ListView(
+              child: Column(
                 children: [
                   Container(
                     width: 350,
                     alignment: Alignment.center,
                     child: DropdownEscolas(
                       selecionado: escolaSelecionada,
-                      titulo: 'Escolas',
+                      titulo: 'Escola *',
                       lista: escolasLista,
                       largura: 400,
                       larguraContainer: 300,
@@ -313,27 +351,35 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                     alignment: Alignment.center,
                     child: DropdownProfessores(
                       selecionado: professorSelecionado,
-                      titulo: 'Professores *',
+                      titulo: 'Professor *',
                       hint: 'Selecione um(a) professor(a)',
                       lista: professoresLista,
                       largura: 400,
                       larguraContainer: 300,
                       onChanged: travarOpcoes?null:(valor){
                         professorSelecionado = valor;
+                        buscarDisciplinas(professorSelecionado!.idEscola, professorSelecionado!.idDisciplinas);
                         setState(() {});
                       },
                     ),
                   ),
                   professorSelecionado == null?Container():Container(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: TextoPadrao(
-                      texto: 'DISCIPLINA: ${professorSelecionado!.nomeProf}',
-                      corTexto: Cores.corPrincipal,
-                      textAling: TextAlign.start,
+                    width: 350,
+                    child: DropdownDisciplinas(
+                      selecionado: disciplinaSelecionada,
+                      titulo: 'Disciplina *',
+                      lista: disciplinasLista,
+                      largura: 400,
+                      larguraContainer: 300,
+                      onChanged:travarOpcoes?null: (valor){
+                        disciplinaSelecionada = valor;
+                        setState(() {});
+                      },
                     ),
                   ),
-                  professorSelecionado!=null && escolaSelecionada!=null?Center(
-                    child: BotaoPadrao(
+                  const SizedBox(height: 20),
+                  professorSelecionado!=null && escolaSelecionada!=null && disciplinaSelecionada!= null?Center(
+                    child: travarOpcoes?Container():BotaoPadrao(
                       titulo: 'Abrir Camera',
                       largura: 250,
                       funcao: (){
@@ -341,8 +387,9 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                       }
                     ),
                   ):Container(),
-                  SizedBox(
-                    width: 500,
+                  Container(
+                    alignment: Alignment.center,
+                    width: 390,
                     height: 300,
                     child: _video != null
                         ? const HtmlElementView(viewType: 'webcam-video')
