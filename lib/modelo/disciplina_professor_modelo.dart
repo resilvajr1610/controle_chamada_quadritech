@@ -1,10 +1,10 @@
-class DisciplinaProfessorModelo {
+class DisciplinaMultiplaListaModelo {
   String idEscola;
   String nomeEscola;
   String idDisciplina;
   String nomeDisciplina;
 
-  DisciplinaProfessorModelo({
+  DisciplinaMultiplaListaModelo({
     required this.idEscola,
     required this.nomeEscola,
     required this.idDisciplina,

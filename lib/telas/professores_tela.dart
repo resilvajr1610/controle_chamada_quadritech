@@ -40,7 +40,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
   TextEditingController pesquisar = TextEditingController();
   bool salvando = false;
   bool exibirCampos = false;
-  List<DisciplinaProfessorModelo> disciplinasBanco = [];
+  List<DisciplinaMultiplaListaModelo> disciplinasBanco = [];
   List<EscolaModelo> escolasLista = [];
   List<ProfessorModelo> professoresLista = [];
   EscolaModelo? escolaSelecionadaPesquisa;
@@ -80,7 +80,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
       disciplinasDoc.docs.forEach((doc) {
         disciplinas.add(doc['nomeDisciplina']);
         disciplinasBanco.add(
-            DisciplinaProfessorModelo(
+            DisciplinaMultiplaListaModelo(
               idEscola: doc['idEscola'],
               nomeEscola: doc['nomeEscola'],
               idDisciplina: doc.id,
@@ -491,6 +491,21 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
                                   funcao: (){
                                     pesquisar.clear();
                                     exibirCampos = !exibirCampos;
+                                    escolaSelecionadaPesquisa = null;
+                                    escolaSelecionadaCadastro = null;
+                                    nome.clear();
+                                    estadoCivil.clear();
+                                    idade.clear();
+                                    curso.clear();
+                                    ano.clear();
+                                    ensino.clear();
+                                    endereco.clear();
+                                    numero.clear();
+                                    bairro.clear();
+                                    cidade.clear();
+                                    cep.clear();
+                                    numeroRegistro.clear();
+                                    disciplinasSelecionadas.clear();
                                     setState(() {});
                                   }
                               ),

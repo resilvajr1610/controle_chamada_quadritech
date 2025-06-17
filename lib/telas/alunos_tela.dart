@@ -7,9 +7,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 import '../modelo/cores.dart';
+import '../modelo/disciplina_professor_modelo.dart';
 import '../modelo/escola_modelo.dart';
 import '../widgets/botao_padrao.dart';
-import '../widgets/dropdown_disciplinas.dart';
 import '../widgets/dropdown_escolas.dart';
 import '../widgets/input_padrao.dart';
 import '../widgets/menu_web.dart';
@@ -17,6 +17,7 @@ import '../widgets/snackbar.dart';
 import '../widgets/texto_padrao.dart';
 import 'package:brasil_fields/brasil_fields.dart';
 import 'dart:html' as html;
+import 'package:multi_select_flutter/multi_select_flutter.dart';
 
 class AlunosTela extends StatefulWidget {
   const AlunosTela({super.key});
@@ -33,7 +34,7 @@ class _AlunosTelaState extends State<AlunosTela> {
   EscolaModelo? escolaSelecionadaCadastro;
   List<EscolaModelo> escolasLista = [];
   List<AlunoModelo> alunosLista = [];
-  List<DisciplinaModelo> disciplinasBanco = [];
+  List<DisciplinaMultiplaListaModelo> disciplinasBanco = [];
   TextEditingController nome = TextEditingController();
   TextEditingController ensino = TextEditingController();
   TextEditingController curso = TextEditingController();
@@ -51,7 +52,8 @@ class _AlunosTelaState extends State<AlunosTela> {
   String idAluno = '';
   Uint8List? imagemweb;
   String urlImagem = '';
-  DisciplinaModelo? disciplinaSelecionadaCadastro;
+  List<MultiSelectItem> disciplinaMultiple = [];
+  List disciplinasSelecionadas = [];
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -78,35 +80,6 @@ class _AlunosTelaState extends State<AlunosTela> {
     });
   }
 
-  carregarDisciplinas(String idEscola){
-
-    disciplinasBanco.clear();
-    disciplinaSelecionadaCadastro = null;
-    setState(() {});
-    FirebaseFirestore.instance.collection('disciplinas')
-        .where('idEscola',isEqualTo: idEscola)
-        .where('status',isEqualTo: 'ativo')
-        .orderBy('nomeDisciplina')
-        .get()
-        .then((disciplinasDoc){
-
-      for(int i = 0; disciplinasDoc.docs.length > i;i++){
-        disciplinasBanco.add(
-          DisciplinaModelo(
-            idEscola: disciplinasDoc.docs[i].id,
-            ensino: disciplinasDoc.docs[i]['ensino'],
-            nomeDisciplina: disciplinasDoc.docs[i]['nomeDisciplina'],
-            ano: disciplinasDoc.docs[i]['ano'],
-            curso: disciplinasDoc.docs[i]['curso'],
-            idDisciplina: disciplinasDoc.docs[i].id,
-            nomeEscola: disciplinasDoc.docs[i]['nomeEscola'],
-          )
-        );
-      }
-      setState(() {});
-    });
-  }
-
   verificarCampos(){
     if(escolaSelecionadaCadastro!=null){
         if(nome.text.length>5){
@@ -121,7 +94,7 @@ class _AlunosTelaState extends State<AlunosTela> {
                             if(estadoCivil.text.length>2){
                               if(idade.text.isNotEmpty){
                                 if(sexo.text.length>2){
-                                  if(disciplinaSelecionadaCadastro!=null){
+                                  if(disciplinasSelecionadas.isNotEmpty){
                                     if(imagemweb!=null || urlImagem.isNotEmpty){
                                       if(imagemweb!=null){
                                         salvarFoto();
@@ -178,6 +151,13 @@ class _AlunosTelaState extends State<AlunosTela> {
   salvarAluno(){
     salvando = true;
     setState(() {});
+    List idDisciplinas = [];
+
+    for(int i =0; disciplinasBanco.length>i;i++){
+      if(disciplinasSelecionadas.contains(disciplinasBanco[i].nomeDisciplina)){
+        idDisciplinas.add(disciplinasBanco[i].idDisciplina);
+      }
+    }
 
     final docRef = FirebaseFirestore.instance.collection('alunos').doc();
     FirebaseFirestore.instance.collection('alunos').doc(docRef.id).set({
@@ -185,8 +165,7 @@ class _AlunosTelaState extends State<AlunosTela> {
       'nomeAluno'     : nome.text.toUpperCase(),
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
-      'idDisciplina'  : disciplinaSelecionadaCadastro!.idDisciplina,
-      'nomeDisciplina': disciplinaSelecionadaCadastro!.nomeDisciplina,
+      'idDisciplinas' : idDisciplinas,
       'bairro'        : bairro.text.toUpperCase(),
       'cep'           : cep.text,
       'cidade'        : cidade.text.toUpperCase(),
@@ -218,6 +197,8 @@ class _AlunosTelaState extends State<AlunosTela> {
       urlImagem = '';
       imagemweb = null;
       salvando = false;
+      disciplinasSelecionadas.clear();
+      exibirCampos = false;
       setState(() {});
       showSnackBar(context, 'Salvo com sucesso', Colors.green);
     });
@@ -226,13 +207,20 @@ class _AlunosTelaState extends State<AlunosTela> {
   editarAluno(){
     salvando = true;
     setState(() {});
+    List idDisciplinas = [];
+    for(int i =0; disciplinasBanco.length>i;i++){
+      if(disciplinasSelecionadas.contains(disciplinasBanco[i].nomeDisciplina)){
+        idDisciplinas.add(disciplinasBanco[i].idDisciplina);
+      }
+    }
+    List aux = idDisciplinas.toSet().toList();
+    idDisciplinas = aux;
 
     FirebaseFirestore.instance.collection('alunos').doc(idAluno).update({
       'nomeAluno'     : nome.text.toUpperCase(),
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
-      'idDisciplina'  : disciplinaSelecionadaCadastro!.idDisciplina,
-      'nomeDisciplina': disciplinaSelecionadaCadastro!.nomeDisciplina,
+      'idDisciplinas' : idDisciplinas,
       'bairro'        : bairro.text.toUpperCase(),
       'cep'           : cep.text,
       'cidade'        : cidade.text.toUpperCase(),
@@ -248,6 +236,8 @@ class _AlunosTelaState extends State<AlunosTela> {
       'urlImagem'     : urlImagem,
     }).then((_){
       escolaSelecionadaCadastro = null;
+      escolaSelecionadaPesquisa = null;
+      pesquisar.clear();
       nome.clear();
       curso.clear();
       bairro.clear();
@@ -263,6 +253,8 @@ class _AlunosTelaState extends State<AlunosTela> {
       urlImagem = '';
       imagemweb = null;
       salvando = false;
+      disciplinasSelecionadas.clear();
+      exibirCampos = false;
       idAluno = '';
       setState(() {});
       showSnackBar(context, 'Alterado com sucesso', Colors.green);
@@ -300,13 +292,11 @@ class _AlunosTelaState extends State<AlunosTela> {
                   ano: alunosDoc.docs[i]['ano'],
                   ensino: alunosDoc.docs[i]['ensino'],
                   sexo: alunosDoc.docs[i]['sexo'],
-                  idDisciplina: alunosDoc.docs[i].data().containsKey('idDisciplina')?alunosDoc.docs[i]['idDisciplina']:'',
-                  nomeDisciplina: alunosDoc.docs[i].data().containsKey('nomeDisciplina')?alunosDoc.docs[i]['nomeDisciplina']:'',
+                  idDisciplinas: alunosDoc.docs[i].data().containsKey('idDisciplinas')?alunosDoc.docs[i]['idDisciplinas']:[],
                   urlImagem: alunosDoc.docs[i].data().containsKey('urlImagem')? alunosDoc.docs[i]['urlImagem']: '',
                 )
             );
           }
-          print(alunosLista.length);
           if(alunosLista.isEmpty){
             showSnackBar(context, 'Nenhum(a) aluno(a) encontrado(a)', Cores.erro);
           }
@@ -337,15 +327,25 @@ class _AlunosTelaState extends State<AlunosTela> {
     sexo.text = aluno.sexo;
     ano.text = aluno.ano.toString();
     urlImagem = aluno.urlImagem;
+    List idsDisciplinas = aluno.idDisciplinas;
+
     exibirCampos = true;
     alunosLista.clear();
     for(int i = 0; escolasLista.length>i; i++){
       if(aluno.idEscola == escolasLista[i].idEscola){
         escolaSelecionadaCadastro = escolasLista[i];
-        carregarDisciplinas(aluno.idEscola);
         break;
       }
     }
+    for (var disciplina in disciplinasBanco) {
+      for (var id in idsDisciplinas) {
+        if (disciplina.idDisciplina == id) {
+          disciplinasSelecionadas.add(disciplina.nomeDisciplina);
+        }
+      }
+    }
+    List aux = disciplinasSelecionadas.toSet().toList();
+    disciplinasSelecionadas = aux;
     setState(() {});
   }
 
@@ -433,6 +433,24 @@ class _AlunosTelaState extends State<AlunosTela> {
     uploadInput.remove();
   }
 
+  carregarDisciplinasEscola(String idEscola){
+    FirebaseFirestore.instance.collection('disciplinas').where('idEscola',isEqualTo: idEscola).get().then((disciplinasDoc) {
+      List disciplinas = [];
+      disciplinasDoc.docs.forEach((doc) {
+        disciplinas.add(doc['nomeDisciplina']);
+        disciplinasBanco.add(
+            DisciplinaMultiplaListaModelo(
+              idEscola: doc['idEscola'],
+              nomeEscola: doc['nomeEscola'],
+              idDisciplina: doc.id,
+              nomeDisciplina: doc['nomeDisciplina'],
+            )
+        );
+      });
+      disciplinaMultiple =disciplinas.map((e) => MultiSelectItem(e, e.toString())).toList();
+      setState(() {});
+    });
+  }
 
   salvarFoto() async {
     salvando = true;
@@ -509,6 +527,7 @@ class _AlunosTelaState extends State<AlunosTela> {
                               onChanged: (valor){
                                 escolaSelecionadaPesquisa = valor;
                                 pesquisar.clear();
+                                carregarDisciplinasEscola(escolaSelecionadaPesquisa!.idEscola);
                                 setState(() {});
                               },
                             ),
@@ -536,6 +555,24 @@ class _AlunosTelaState extends State<AlunosTela> {
                                   largura: 50,
                                   funcao: (){
                                     pesquisar.clear();
+                                    escolaSelecionadaPesquisa = null;
+                                    escolaSelecionadaCadastro = null;
+                                    nome.clear();
+                                    estadoCivil.clear();
+                                    idade.clear();
+                                    curso.clear();
+                                    ano.clear();
+                                    ensino.clear();
+                                    sexo.clear();
+                                    endereco.clear();
+                                    numero.clear();
+                                    bairro.clear();
+                                    cidade.clear();
+                                    cep.clear();
+                                    numeroRegistro.clear();
+                                    imagemweb = null;
+                                    urlImagem = '';
+                                    disciplinasSelecionadas.clear();
                                     exibirCampos = !exibirCampos;
                                     setState(() {});
                                   }
@@ -602,24 +639,49 @@ class _AlunosTelaState extends State<AlunosTela> {
                               larguraContainer: 400,
                               onChanged: (valor){
                                 escolaSelecionadaCadastro = valor;
-                                carregarDisciplinas(escolaSelecionadaCadastro!.idEscola);
+                                carregarDisciplinasEscola(escolaSelecionadaCadastro!.idEscola);
                                 setState(() {});
                               },
                             ),
                           ),
-                          Container(
+                          disciplinaMultiple.isEmpty?Container():Container(
+                            height: disciplinasSelecionadas.isEmpty?80:130,
                             width: 485,
-                            child: DropdownDisciplinas(
-                              selecionado: disciplinaSelecionadaCadastro,
-                              titulo: 'Disciplina *',
-                              hint: 'Selecione uma disciplina',
-                              lista: disciplinasBanco,
-                              largura: 519,
-                              larguraContainer: 400,
-                              onChanged: (valor){
-                                disciplinaSelecionadaCadastro = valor;
-                                setState(() {});
-                              },
+                            alignment:Alignment.bottomCenter,
+                            child: ListView(
+                              children: [
+                                Container(
+                                  alignment: Alignment.bottomLeft,
+                                  child: TextoPadrao(texto: 'Disciplinas *',tamanhoTexto: 18,corTexto: Cores.corPrincipal,)
+                                ),
+                                MultiSelectDialogField(
+                                  items: disciplinaMultiple,
+                                  initialValue: disciplinasSelecionadas,
+                                  title: Text("Disciplinas",style: TextStyle(color: Cores.corPrincipal),),
+                                  selectedColor: Cores.corPrincipal,
+                                  dialogHeight: altura*0.5,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                                    border: Border.all(
+                                      color: Colors.grey.withOpacity(0.0),
+                                      width: 0,
+                                    ),
+                                  ),
+                                  buttonText: Text(
+                                    "Selecione a(s) disciplina(s)",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  onConfirm: (results) {
+                                    disciplinasSelecionadas.clear();
+                                    disciplinasSelecionadas = results;
+                                    setState(() {});
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                           InputPadrao(

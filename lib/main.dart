@@ -1,3 +1,4 @@
+import 'package:controle_chamada_quadritech/telas/alunos_tela.dart';
 import 'package:controle_chamada_quadritech/telas/professores_tela.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -17,7 +18,7 @@ void main() async {
     MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Controle de Chamadas Quadritech',
-      home: ProfessoresTela(),
+      home: AlunosTela(),
     )
   );
 }

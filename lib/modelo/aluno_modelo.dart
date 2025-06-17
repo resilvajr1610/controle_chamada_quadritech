@@ -3,8 +3,7 @@ class AlunoModelo {
   String nomeAluno;
   String idEscola;
   String nomeEscola;
-  String idDisciplina;
-  String nomeDisciplina;
+  List idDisciplinas;
   String endereco;
   int numero;
   String bairro;
@@ -24,8 +23,7 @@ class AlunoModelo {
     required this.nomeAluno,
     required this.idEscola,
     required this.nomeEscola,
-    required this.idDisciplina,
-    required this.nomeDisciplina,
+    required this.idDisciplinas,
     required this.endereco,
     required this.numero,
     required this.bairro,
