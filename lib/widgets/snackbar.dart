@@ -4,6 +4,7 @@ void showSnackBar(BuildContext context, String mensagem, Color cor){
 
   final snackbar = SnackBar(
       backgroundColor: cor,
+      duration: Duration(milliseconds: 500),
       content: Row(
         children: [
           Icon(Icons.info_outline,color: Colors.white,),

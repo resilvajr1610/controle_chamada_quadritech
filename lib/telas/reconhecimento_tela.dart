@@ -188,8 +188,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://localhost:5000/verificar'),
-        // Uri.parse('http://54.83.152.11:5000/verificar'),
+        // Uri.parse('http://localhost:5000/verificar'),
+        Uri.parse('http://54.83.152.11:5000/verificar'),
       )
         ..fields['id_disciplina'] = disciplinaSelecionada!.idDisciplina
         ..files.add(http.MultipartFile.fromBytes(
@@ -218,7 +218,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
             showSnackBar(context, 'Aluno(a) ${data['aluno']} registrado nos ultimos 10 minutos', Colors.blue);
           }
         }else{
-          showSnackBar(context, 'Aluno(a) não reconhecido', Colors.red);
+          showSnackBar(context, 'Aluno(a) não reconhecido\n Tente centralizar melhor o rosto e verifique a luz do ambiente!', Colors.red);
         }
         return '';
       } else {
@@ -236,17 +236,18 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     final agora = DateTime.now();
     final inicioDoDia = DateTime(agora.year, agora.month, agora.day);
 
+    // Busca apenas os registros daquele aluno, daquela disciplina, no dia atual
     final snapshot = await FirebaseFirestore.instance
         .collection('presencas')
         .where('alunoId', isEqualTo: alunoId)
         .where('idDisciplina', isEqualTo: disciplinaSelecionada!.idDisciplina)
         .where('dataHora', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
-        .where('dataHora', isLessThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
         .orderBy('dataHora', descending: true)
         .limit(1)
         .get();
 
     if (snapshot.docs.isEmpty) {
+      // Nenhum registro hoje para essa disciplina -> começa com ENTRADA 1
       return 'ENTRADA 1';
     }
 
@@ -254,7 +255,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     final String ultimaSituacao = ultimo['situacao'];
 
     final partes = ultimaSituacao.split(' ');
-    final tipo = partes[0]; // "ENTRADA" ou "SAIDA"
+    final tipo = partes[0]; // ENTRADA ou SAIDA
     final numero = int.tryParse(partes[1]) ?? 1;
 
     if (tipo == 'ENTRADA') {
@@ -263,6 +264,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
       return 'ENTRADA ${numero + 1}';
     }
   }
+
 
   registrarPresenca(Map resposta, String situacao, Uint8List frame,String urlImagem){
     final docRef = FirebaseFirestore.instance.collection('presencas').doc();
