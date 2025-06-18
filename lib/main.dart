@@ -1,10 +1,10 @@
-import 'package:controle_chamada_quadritech/telas/alunos_tela.dart';
-import 'package:controle_chamada_quadritech/telas/professores_tela.dart';
+import 'package:controle_chamada_quadritech/telas/chamadas_tela.dart';
 import 'package:controle_chamada_quadritech/telas/reconhecimento_tela.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
+  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: FirebaseOptions(
@@ -17,6 +17,7 @@ void main() async {
   );
   runApp(
     MaterialApp(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Controle de Chamadas Quadritech',
       home: ReconhecimentoTela(),

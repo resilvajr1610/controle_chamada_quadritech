@@ -9,9 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import '../modelo/cores.dart';
+import '../modelo/disciplina_modelo.dart';
 import '../modelo/escola_modelo.dart';
 import '../modelo/professor_chamada_modelo.dart';
 import '../widgets/calendario_data.dart';
+import '../widgets/dropdown_disciplinas.dart';
 import '../widgets/dropdown_escolas.dart';
 import '../widgets/menu_web.dart';
 import '../widgets/snackbar.dart';
@@ -36,6 +38,8 @@ class _ChamadasTelaState extends State<ChamadasTela> {
   List<AlunoChamadaModelo> alunosBanco = [];
   AlunoChamadaModelo? alunoSelecionado;
   TextEditingController calendario = TextEditingController();
+  DisciplinaModelo? disciplinaSelecionada;
+  List<DisciplinaModelo> disciplinasLista = [];
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -82,8 +86,7 @@ class _ChamadasTelaState extends State<ChamadasTela> {
           ProfessorChamadaModelo(
             idProf: professoresDoc.docs[i].id,
             nomeProf: professoresDoc.docs[i]['nomeProf'],
-            idDisciplina: professoresDoc.docs[i]['idDisciplina'],
-            nomeDisciplina: professoresDoc.docs[i]['nomeDisciplina'],
+            idDisciplinas: professoresDoc.docs[i]['idDisciplinas'],
             idEscola: professoresDoc.docs[i]['idEscola'],
             nomeEscola: professoresDoc.docs[i]['nomeEscola'],
           )
@@ -99,46 +102,42 @@ class _ChamadasTelaState extends State<ChamadasTela> {
     alunosBanco.clear();
     alunoSelecionado = null;
     setState(() {});
+    FirebaseFirestore.instance.collection('presencas')
+        .where('idDisciplina',isEqualTo: disciplinaSelecionada!.idDisciplina)
+        .orderBy('dataHora').get().then((chamadasDoc){
 
-    if(escolaSelecionadaPesquisa!=null){
-      FirebaseFirestore.instance.collection('presencas')
-          .where('idDisciplina',isEqualTo: professorSelecionado!.idDisciplina)
-          .orderBy('dataHora').get().then((chamadasDoc){
-
-        List idsAlunos = [];
-        for(int i = 0; chamadasDoc.docs.length > i;i++){
-          alunosListaTodas.add(
-              ChamadaModelo(
-                idPresenca: chamadasDoc.docs[i].id,
-                idEscola: chamadasDoc.docs[i]['idEscola'],
-                nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
+      List idsAlunos = [];
+      for(int i = 0; chamadasDoc.docs.length > i;i++){
+        alunosListaTodas.add(
+            ChamadaModelo(
+              idPresenca: chamadasDoc.docs[i].id,
+              idEscola: chamadasDoc.docs[i]['idEscola'],
+              nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
+              idAluno: chamadasDoc.docs[i]['alunoId'],
+              nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
+              idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
+              nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
+              dataHora: chamadasDoc.docs[i]['dataHora'],
+              situacao: chamadasDoc.docs[i]['situacao'],
+            )
+        );
+        if(!idsAlunos.contains(chamadasDoc.docs[i]['alunoId'])){
+          alunosBanco.add(
+              AlunoChamadaModelo(
                 idAluno: chamadasDoc.docs[i]['alunoId'],
                 nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
-                idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
-                nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
-                dataHora: chamadasDoc.docs[i]['dataHora'],
-                situacao: chamadasDoc.docs[i]['situacao'],
               )
           );
-          if(!idsAlunos.contains(chamadasDoc.docs[i]['alunoId'])){
-            alunosBanco.add(
-                AlunoChamadaModelo(
-                  idAluno: chamadasDoc.docs[i]['alunoId'],
-                  nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
-                )
-            );
-            idsAlunos.add(chamadasDoc.docs[i]['alunoId']);
-          }
+          idsAlunos.add(chamadasDoc.docs[i]['alunoId']);
         }
-        alunosListaFiltrada.addAll(alunosListaTodas);
-        if(alunosListaTodas.isEmpty){
-          showSnackBar(context, 'Nenhum(a) chamada encontrada', Cores.erro);
-        }
-        setState(() {});
-      });
-    }else{
-      showSnackBar(context, 'Selecione uma escola para pesquisar', Cores.erro);
-    }
+      }
+      alunosListaFiltrada.addAll(alunosListaTodas);
+      if(alunosListaTodas.isEmpty){
+        showSnackBar(context, 'Nenhum(a) chamada encontrada', Cores.erro);
+      }
+      setState(() {});
+    });
+
     setState(() {});
   }
 
@@ -249,6 +248,35 @@ class _ChamadasTelaState extends State<ChamadasTela> {
 
   }
 
+  buscarDisciplinas(String idEscola, List idDisciplinas){
+    FirebaseFirestore.instance.collection('disciplinas')
+        .where('idEscola',isEqualTo: idEscola)
+        .where('status',isNotEqualTo: 'inativo')
+        .orderBy('nomeDisciplina').get().then((escolasDoc){
+
+      for(int i = 0; escolasDoc.docs.length > i;i++){
+        if(idDisciplinas.contains(escolasDoc.docs[i].id)){
+          disciplinasLista.add(
+              DisciplinaModelo(
+                idEscola: escolasDoc.docs[i]['idEscola'],
+                nomeEscola: escolasDoc.docs[i]['nomeEscola'],
+                idDisciplina: escolasDoc.docs[i].id,
+                nomeDisciplina: escolasDoc.docs[i]['nomeDisciplina'],
+                curso: escolasDoc.docs[i]['curso'],
+                ano: escolasDoc.docs[i]['ano'],
+                ensino: escolasDoc.docs[i]['ensino'],
+              )
+          );
+        }
+      }
+      if(disciplinasLista.isEmpty){
+        showSnackBar(context, 'Nenhuma disciplina encontrada', Cores.erro);
+      }
+      setState(() {});
+    });
+    setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
@@ -310,6 +338,23 @@ class _ChamadasTelaState extends State<ChamadasTela> {
                                 professorSelecionado = valor;
                                 alunoSelecionado = null;
                                 calendario.clear();
+                                buscarDisciplinas(professorSelecionado!.idEscola, professorSelecionado!.idDisciplinas);
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                          professorSelecionado == null?Container():Container(
+                            width: 350,
+                            child: DropdownDisciplinas(
+                              selecionado: disciplinaSelecionada,
+                              titulo: 'Disciplina *',
+                              lista: disciplinasLista,
+                              largura: 400,
+                              larguraContainer: 300,
+                              onChanged:(valor){
+                                disciplinaSelecionada = valor;
+                                calendario.clear();
+                                alunosListaFiltrada.clear();
                                 carregarPresencas();
                                 setState(() {});
                               },
@@ -341,7 +386,7 @@ class _ChamadasTelaState extends State<ChamadasTela> {
                                   },
                                 ),
                               ),
-                              escolaSelecionadaPesquisa ==null && professorSelecionado == null?Container():CalendarioData(
+                              escolaSelecionadaPesquisa ==null || professorSelecionado == null || disciplinaSelecionada == null?Container():CalendarioData(
                                 controller: calendario,
                                 validaData: true,
                                 funcaoBotao: ()=>escolherData(context),
@@ -351,15 +396,10 @@ class _ChamadasTelaState extends State<ChamadasTela> {
                               )
                             ],
                           ),
-                          professorSelecionado==null?Container():TextoPadrao(
-                            texto: 'DISCIPLINA: ${professorSelecionado!.nomeDisciplina}',
-                            corTexto: Cores.corPrincipal,
-                            textAling: TextAlign.start,
-                            tamanhoTexto: 16,
-                          ),
                           Container(
+                            padding: EdgeInsets.all(20),
                             height: 500,
-                            width: 600,
+                            width: 1000,
                             child: ListView.builder(
                                 itemCount: alunosListaFiltrada.length,
                                 itemBuilder: (context,i){
@@ -370,10 +410,10 @@ class _ChamadasTelaState extends State<ChamadasTela> {
                                     child: Row(
                                       children: [
                                         TextoPadrao(
-                                          texto: '${alunosListaFiltrada[i].nomeAluno} - ${ConverterDataModelo().formatarTimestamp(alunosListaFiltrada[i].dataHora)}',
+                                          texto: '${ConverterDataModelo().formatarTimestamp(alunosListaFiltrada[i].dataHora)} - ${alunosListaFiltrada[i].nomeAluno}',
                                           corTexto: Cores.corPrincipal,
                                           textAling: TextAlign.start,
-                                          tamanhoTexto: 16,
+                                          tamanhoTexto: 14,
                                         ),
                                         Spacer(),
                                         Container(

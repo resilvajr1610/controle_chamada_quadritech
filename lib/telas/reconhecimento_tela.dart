@@ -17,7 +17,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui;
 import 'package:http_parser/http_parser.dart';
-
+import 'package:firebase_storage/firebase_storage.dart';
 import '../widgets/dropdown_professores.dart';
 
 class ReconhecimentoTela extends StatefulWidget {
@@ -41,6 +41,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
   String _resultado = '';
   bool aguardando = false;
   bool travarOpcoes = false;
+  String viewId = '';
+  String status = 'Verificando...';
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -145,9 +147,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
       ..style.width = '390px'
       ..style.height = '300px';
 
-    // Registra o vídeo para ser exibido no Flutter
     ui.platformViewRegistry.registerViewFactory(
-      'webcam-video',
+      viewId,
       (int viewId) => _video!,
     );
     travarOpcoes = true;
@@ -158,8 +159,9 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     _video!.srcObject = _mediaStream;
     final canvas = html.CanvasElement(width: 390, height: 300);
 
-    Timer.periodic(const Duration(seconds: 5), (_) async {
+    Timer.periodic(const Duration(seconds: 10), (_) async {
       aguardando = true;
+      status = 'Verificando...';
       if (!mounted) return;
       setState(() {});
 
@@ -178,7 +180,6 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
 
         aguardando = false;
         setState(() {});
-        print('resultado: $_resultado');
       }
     });
   }
@@ -201,8 +202,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
       final response = await request.send();
       final body = await response.stream.bytesToString();
 
-      print(response.statusCode);
-      print(body);
+      print('resultado: $body');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(body);
@@ -211,7 +211,11 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
           int diferenca = await verificarDiferencaUltimaPresenca(data['aluno_id']);
           if(diferenca>=10){
             String situacao = await obterProximaSituacao(data['aluno_id']);
-            registrarPresenca(data,situacao);
+            status = 'salvando captura ...';
+            aguardando = true;
+            salvarFoto(data,situacao,frame);
+          }else{
+            showSnackBar(context, 'Aluno(a) ${data['aluno']} registrado nos ultimos 10 minutos', Colors.blue);
           }
         }else{
           showSnackBar(context, 'Aluno(a) não reconhecido', Colors.red);
@@ -222,6 +226,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
         return '';
       }
     } catch (e) {
+      showSnackBar(context, 'Erro de rede ou no servidor', Colors.red);
       print('Erro na requisição: $e');
       return '';
     }
@@ -234,7 +239,9 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     final snapshot = await FirebaseFirestore.instance
         .collection('presencas')
         .where('alunoId', isEqualTo: alunoId)
+        .where('idDisciplina', isEqualTo: disciplinaSelecionada!.idDisciplina)
         .where('dataHora', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
+        .where('dataHora', isLessThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
         .orderBy('dataHora', descending: true)
         .limit(1)
         .get();
@@ -257,7 +264,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     }
   }
 
-  registrarPresenca(Map resposta, String situacao){
+  registrarPresenca(Map resposta, String situacao, Uint8List frame,String urlImagem){
     final docRef = FirebaseFirestore.instance.collection('presencas').doc();
     FirebaseFirestore.instance.collection('presencas').doc(docRef.id).set({
       'idPresenca'    : docRef.id,
@@ -270,15 +277,36 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
       'nomeAluno'     : resposta['aluno'],
       'alunoId'       : resposta['aluno_id'],
       'dataHora'      : DateTime.now(),
-      'situacao'      : situacao
+      'situacao'      : situacao,
+      'urlImagem'     : urlImagem
     });
+    status = '';
     showSnackBar(context, 'Presença Registrada para o(a) aluno(a) ${resposta['aluno']}', Colors.green);
+  }
+
+  salvarFoto(Map resposta, String situacao, Uint8List frame) async {
+    setState(() {});
+
+    String nomeImagem = 'reconhecimento_${DateTime.now().toIso8601String()}.jpg';
+    Uint8List arquivoSelecionado = frame!;
+
+    if (arquivoSelecionado.isEmpty) {
+      return;
+    }
+
+    FirebaseStorage storage = FirebaseStorage.instance;
+    Reference reference = storage.ref('reconhecimento/fotos/').child(nomeImagem);
+    UploadTask uploadTaskSnapshot = reference.putData(arquivoSelecionado);
+    final TaskSnapshot downloadUrl = await uploadTaskSnapshot;
+    String urlImagem = (await downloadUrl.ref.getDownloadURL());
+    registrarPresenca(resposta,situacao,frame,urlImagem);
   }
 
   Future<int> verificarDiferencaUltimaPresenca(String alunoId) async {
     final snapshot = await FirebaseFirestore.instance
         .collection('presencas')
         .where('alunoId', isEqualTo: alunoId)
+        .where('idDisciplina', isEqualTo: disciplinaSelecionada!.idDisciplina)
         .orderBy('dataHora', descending: true)
         .limit(1)
         .get();
@@ -300,12 +328,16 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
   @override
   void initState() {
     super.initState();
+    viewId = 'webcam-video-${DateTime.now().millisecondsSinceEpoch}';
     carregarEscolas();
   }
+  final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
   void dispose() {
     _timer?.cancel();
     _mediaStream?.getTracks().forEach((t) => t.stop());
+    _video = null;
+    scaffoldMessengerKey.currentState?.clearSnackBars();
     super.dispose();
   }
 
@@ -373,6 +405,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                       larguraContainer: 300,
                       onChanged:travarOpcoes?null: (valor){
                         disciplinaSelecionada = valor;
+                        print(disciplinaSelecionada!.idDisciplina);
+                        print(disciplinaSelecionada!.nomeDisciplina);
                         setState(() {});
                       },
                     ),
@@ -392,7 +426,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                     width: 390,
                     height: 300,
                     child: _video != null
-                        ? const HtmlElementView(viewType: 'webcam-video')
+                        ? HtmlElementView(viewType: viewId)
                         : Container(),
                   ),
                   const SizedBox(height: 20),
@@ -401,7 +435,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           CircularProgressIndicator(color: Cores.corPrincipal,),
-                          TextoPadrao(texto: 'Verificando...',corTexto: Cores.corPrincipal,)
+                          TextoPadrao(texto: status,corTexto: Cores.corPrincipal,)
                         ],
                       ):
                       Text('$_resultado',

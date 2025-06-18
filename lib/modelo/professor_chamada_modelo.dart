@@ -3,15 +3,13 @@ class ProfessorChamadaModelo {
   String nomeProf;
   String idEscola;
   String nomeEscola;
-  String idDisciplina;
-  String nomeDisciplina;
+  List idDisciplinas;
 
   ProfessorChamadaModelo({
     required this.idProf,
     required this.nomeProf,
     required this.idEscola,
     required this.nomeEscola,
-    required this.idDisciplina,
-    required this.nomeDisciplina,
+    required this.idDisciplinas,
   });
 }
