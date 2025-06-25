@@ -3,8 +3,8 @@ import 'package:controle_chamada_quadritech/telas/reconhecimento_tela.dart';
 import 'package:controle_chamada_quadritech/widgets/botao_padrao.dart';
 import 'package:controle_chamada_quadritech/widgets/input_padrao.dart';
 import 'package:flutter/material.dart';
-
 import '../widgets/snackbar.dart';
+import '../widgets/texto_padrao.dart';
 
 class LoginTela extends StatefulWidget {
   const LoginTela({super.key});
@@ -37,6 +37,18 @@ class _LoginTelaState extends State<LoginTela> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        actions: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextoPadrao(
+              texto: 'versão : 1.0.1+2',
+              corTexto: Cores.corPrincipal,
+              tamanhoTexto: 10,
+            ),
+          )
+        ],
+      ),
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -69,7 +81,7 @@ class _LoginTelaState extends State<LoginTela> {
               funcao: (){
                 fazerLogin();
               }
-            )
+            ),
           ],
         ),
       ),
