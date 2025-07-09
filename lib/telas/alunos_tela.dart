@@ -261,55 +261,75 @@ class _AlunosTelaState extends State<AlunosTela> {
     });
   }
 
-  pesquisarAluno(){
+  void pesquisarAluno() async {
     alunosLista.clear();
     exibirCampos = false;
-    if(pesquisar.text.length>2){
-      if(escolaSelecionadaPesquisa!=null){
-        FirebaseFirestore.instance.collection('alunos')
-            .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
-            .where('status',isNotEqualTo: 'inativo')
-            .orderBy('nomeAluno')
-            .startAt([pesquisar.text.toUpperCase()])
-            .endAt(['${pesquisar.text.toUpperCase()}\uf8ff']).get().then((alunosDoc){
 
-          for(int i = 0; alunosDoc.docs.length > i;i++){
-            alunosLista.add(
-                AlunoModelo(
-                  idEscola: alunosDoc.docs[i]['idEscola'],
-                  nomeEscola: alunosDoc.docs[i]['nomeEscola'],
-                  idAluno: alunosDoc.docs[i].id,
-                  nomeAluno: alunosDoc.docs[i]['nomeAluno'],
-                  cep:  alunosDoc.docs[i]['cep'],
-                  cidade:  alunosDoc.docs[i]['cidade'],
-                  bairro:  alunosDoc.docs[i]['bairro'],
-                  numero:  alunosDoc.docs[i]['numero'],
-                  endereco:  alunosDoc.docs[i]['endereco'],
-                  numeroRegistro:  alunosDoc.docs[i]['numeroRegistro'],
-                  estadoCivil:  alunosDoc.docs[i]['estadoCivil'],
-                  idade:  alunosDoc.docs[i]['idade'],
-                  curso: alunosDoc.docs[i]['curso'],
-                  ano: alunosDoc.docs[i]['ano'],
-                  ensino: alunosDoc.docs[i]['ensino'],
-                  sexo: alunosDoc.docs[i]['sexo'],
-                  idDisciplinas: alunosDoc.docs[i].data().containsKey('idDisciplinas')?alunosDoc.docs[i]['idDisciplinas']:[],
-                  urlImagem: alunosDoc.docs[i].data().containsKey('urlImagem')? alunosDoc.docs[i]['urlImagem']: '',
-                )
-            );
-          }
-          if(alunosLista.isEmpty){
-            showSnackBar(context, 'Nenhum(a) aluno(a) encontrado(a)', Cores.erro);
-          }
-          setState(() {});
-        });
-      }else{
+    if (pesquisar.text.length > 0) {
+      if (escolaSelecionadaPesquisa != null) {
+        String termo = pesquisar.text.toUpperCase();
+
+        QuerySnapshot alunosDoc = await FirebaseFirestore.instance
+            .collection('alunos')
+            .where('nomeEscola', isEqualTo: escolaSelecionadaPesquisa!.nome)
+            .where('status', isNotEqualTo: 'inativo')
+            .orderBy('nomeAluno')
+            .startAt([termo])
+            .endAt(['$termo\uf8ff'])
+            .get();
+
+        if (alunosDoc.docs.isEmpty) {
+          alunosDoc = await FirebaseFirestore.instance
+              .collection('alunos')
+              .where('nomeEscola', isEqualTo: escolaSelecionadaPesquisa!.nome)
+              .where('status', isNotEqualTo: 'inativo')
+              .orderBy('numeroRegistro')
+              .startAt([termo])
+              .endAt(['$termo\uf8ff'])
+              .get();
+        }
+
+        for (var doc in alunosDoc.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          alunosLista.add(
+            AlunoModelo(
+              idEscola: doc['idEscola'],
+              nomeEscola: doc['nomeEscola'],
+              idAluno: doc.id,
+              nomeAluno: doc['nomeAluno'],
+              cep: doc['cep'],
+              cidade: doc['cidade'],
+              bairro: doc['bairro'],
+              numero: doc['numero'],
+              endereco: doc['endereco'],
+              numeroRegistro: doc['numeroRegistro'],
+              estadoCivil: doc['estadoCivil'],
+              idade: doc['idade'],
+              curso: doc['curso'],
+              ano: doc['ano'],
+              ensino: doc['ensino'],
+              sexo: doc['sexo'],
+              idDisciplinas: data.containsKey('idDisciplinas') ? data['idDisciplinas'] : [],
+              urlImagem: data.containsKey('urlImagem') ? data['urlImagem'] : '',
+            )
+          );
+        }
+
+        if (alunosLista.isEmpty) {
+          showSnackBar(context, 'Nenhum(a) aluno(a) encontrado(a)', Cores.erro);
+        }
+
+        setState(() {});
+      } else {
         showSnackBar(context, 'Selecione uma escola para pesquisar', Cores.erro);
       }
-    }else{
-      showSnackBar(context, 'Digite pelo menos 3 caracteres para pesquisar', Cores.erro);
+    } else {
+      showSnackBar(context, 'Digite pelo menos 1 caracter para pesquisar', Cores.erro);
     }
+
     setState(() {});
   }
+
 
   preencherCampos(AlunoModelo aluno){
     idAluno = aluno.idAluno;
@@ -538,7 +558,7 @@ class _AlunosTelaState extends State<AlunosTela> {
                             children: [
                               exibirCampos?Container(width: 350,):InputPadrao(
                                 controller: pesquisar,
-                                titulo: 'Pesquisar pelo nome do(a) aluno(a)',
+                                titulo: 'Pesquisar pelo nome do(a) aluno(a) ou número de registro',
                                 largura: 350,
                               ),
                               SizedBox(width: 20,),

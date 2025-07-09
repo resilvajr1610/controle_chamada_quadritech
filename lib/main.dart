@@ -1,4 +1,8 @@
+import 'package:controle_chamada_quadritech/telas/alunos_tela.dart';
+import 'package:controle_chamada_quadritech/telas/disciplinas_tela.dart';
+import 'package:controle_chamada_quadritech/telas/escolas_tela.dart';
 import 'package:controle_chamada_quadritech/telas/login_tela.dart';
+import 'package:controle_chamada_quadritech/telas/professores_tela.dart';
 import 'package:controle_chamada_quadritech/telas/reconhecimento_tela.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -20,7 +24,7 @@ void main() async {
       scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Controle de Chamadas Quadritech',
-      home: LoginTela(),
+      home: AlunosTela(),
     )
   );
 }

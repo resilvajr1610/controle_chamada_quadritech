@@ -266,7 +266,6 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     }
   }
 
-
   registrarPresenca(Map resposta, String situacao, Uint8List frame,String urlImagem){
     final docRef = FirebaseFirestore.instance.collection('presencas').doc();
     FirebaseFirestore.instance.collection('presencas').doc(docRef.id).set({

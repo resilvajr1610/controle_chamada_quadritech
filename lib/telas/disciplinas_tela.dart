@@ -36,24 +36,52 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
+      .where('status',isNotEqualTo: 'inativo')
+      .orderBy('nome')
+      .get()
+      .then((escolasDoc){
+        for(int i = 0; escolasDoc.docs.length > i;i++){
+          escolasLista.add(
+              EscolaModelo(
+                idEscola: escolasDoc.docs[i].id,
+                bairro: escolasDoc.docs[i]['bairro'],
+                cep: escolasDoc.docs[i]['cep'],
+                cidade: escolasDoc.docs[i]['cidade'],
+                endereco: escolasDoc.docs[i]['endereco'],
+                ensino: escolasDoc.docs[i]['ensino'],
+                nome: escolasDoc.docs[i]['nome'],
+                numero: escolasDoc.docs[i]['numero'],
+                numeroRegistro: escolasDoc.docs[i]['numeroRegistro'],
+              )
+          );
+        }
+        setState(() {});
+    });
+  }
+
+  carregarDisciplinas(){
+    disciplinasLista.clear();
+    FirebaseFirestore.instance.collection('disciplinas')
+        .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
         .where('status',isNotEqualTo: 'inativo')
-        .orderBy('nome')
-        .get()
-        .then((escolasDoc){
-          for(int i = 0; escolasDoc.docs.length > i;i++){
-            escolasLista.add(
-                EscolaModelo(
-                  idEscola: escolasDoc.docs[i].id,
-                  bairro: escolasDoc.docs[i]['bairro'],
-                  cep: escolasDoc.docs[i]['cep'],
-                  cidade: escolasDoc.docs[i]['cidade'],
-                  endereco: escolasDoc.docs[i]['endereco'],
-                  ensino: escolasDoc.docs[i]['ensino'],
-                  nome: escolasDoc.docs[i]['nome'],
-                  numero: escolasDoc.docs[i]['numero'],
-                  numeroRegistro: escolasDoc.docs[i]['numeroRegistro'],
-                )
-            );
+        .orderBy('nomeDisciplina').get().then((escolasDoc){
+
+      for(int i = 0; escolasDoc.docs.length > i;i++){
+        disciplinasLista.add(
+            DisciplinaModelo(
+              idEscola: escolasDoc.docs[i]['idEscola'],
+              nomeEscola: escolasDoc.docs[i]['nomeEscola'],
+              idDisciplina: escolasDoc.docs[i].id,
+              nomeDisciplina: escolasDoc.docs[i]['nomeDisciplina'],
+              curso: escolasDoc.docs[i]['curso'],
+              ano: escolasDoc.docs[i]['ano'],
+              ensino: escolasDoc.docs[i]['ensino'],
+            )
+        );
+      }
+      print(disciplinasLista.length);
+      if(disciplinasLista.isEmpty){
+        showSnackBar(context, 'Nenhuma disciplina encontrada', Cores.erro);
       }
       setState(() {});
     });
@@ -160,6 +188,7 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
          }
          print(disciplinasLista.length);
          if(disciplinasLista.isEmpty){
+           carregarDisciplinas();
            showSnackBar(context, 'Nenhuma disciplina encontrada', Cores.erro);
          }
          setState(() {});
@@ -295,6 +324,7 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
                               larguraContainer: 300,
                               onChanged: (valor){
                                 escolaSelecionadaPesquisa = valor;
+                                carregarDisciplinas();
                                 setState(() {});
                               },
                             ),

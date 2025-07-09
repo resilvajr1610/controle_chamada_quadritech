@@ -77,7 +77,7 @@ class _EscolasTelaState extends State<EscolasTela> {
       'bairro'          : bairro.text.toUpperCase(),
       'cidade'          : cidade.text.toUpperCase(),
       'cep'             : cep.text,
-      'numeroRegistro'  : numeroRegistro.text,
+      'numeroRegistro'  : numeroRegistro.text.toUpperCase(),
       'ensino'          : ensino.text.toUpperCase(),
       'status'          : 'ativo'
     }).then((_){
@@ -103,7 +103,7 @@ class _EscolasTelaState extends State<EscolasTela> {
       'bairro'          : bairro.text.toUpperCase(),
       'cidade'          : cidade.text.toUpperCase(),
       'cep'             : cep.text,
-      'numeroRegistro'  : numeroRegistro.text,
+      'numeroRegistro'  : numeroRegistro.text.toUpperCase(),
       'ensino'          : ensino.text.toUpperCase(),
     }).then((_){
       nome.clear();
@@ -143,40 +143,67 @@ class _EscolasTelaState extends State<EscolasTela> {
     });
   }
 
-  pesquisarEscola(){
+  void pesquisarEscola() async {
     escolasLista.clear();
     exibirCampos = false;
     idEscola = '';
-    if(pesquisar.text.length>2){
-      FirebaseFirestore.instance.collection('escolas')
-          .orderBy('nome')
-          .where('status',isNotEqualTo: 'inativo')
-          .startAt([pesquisar.text.toUpperCase()])
-          .endAt(['${pesquisar.text.toUpperCase()}\uf8ff']).get().then((escolasDoc){
 
-          for(int i = 0; escolasDoc.docs.length > i;i++){
-            escolasLista.add(
-              EscolaModelo(
-                idEscola: escolasDoc.docs[i].id,
-                bairro: escolasDoc.docs[i]['bairro'],
-                cep: escolasDoc.docs[i]['cep'],
-                cidade: escolasDoc.docs[i]['cidade'],
-                endereco: escolasDoc.docs[i]['endereco'],
-                ensino: escolasDoc.docs[i]['ensino'],
-                nome: escolasDoc.docs[i]['nome'],
-                numero: escolasDoc.docs[i]['numero'],
-                numeroRegistro: escolasDoc.docs[i]['numeroRegistro'],
-              )
-            );
-          }
-          setState(() {});
-          if(escolasLista.isEmpty){
-            showSnackBar(context, 'Nenhuma escola encontrada', Cores.erro);
-          }
-      });
-    }else{
-      showSnackBar(context, 'Digite pelo menos 3 caracteres para pesquisar', Cores.erro);
+    if (pesquisar.text.isNotEmpty) {
+      String termo = pesquisar.text.toUpperCase().trim();
+
+      print(termo);
+
+      QuerySnapshot escolasDoc = await FirebaseFirestore.instance
+          .collection('escolas')
+          .orderBy('nome')
+          .where('status', isNotEqualTo: 'inativo')
+          .startAt([termo])
+          .endAt(['$termo\uf8ff'])
+          .get();
+
+      // Se não encontrou nada, tenta buscar por numeroRegistro
+
+      print(escolasDoc.docs.length);
+      print(termo);
+
+      if (escolasDoc.docs.isEmpty) {
+        escolasDoc = await FirebaseFirestore.instance
+            .collection('escolas')
+            .orderBy('numeroRegistro')
+            .where('status', isNotEqualTo: 'inativo')
+            .startAt([termo])
+            .endAt(['$termo\uf8ff'])
+            .get();
+
+        print(escolasDoc.docs.length);
+      }
+
+      for (var doc in escolasDoc.docs) {
+        escolasLista.add(
+          EscolaModelo(
+            idEscola: doc.id,
+            bairro: doc['bairro'],
+            cep: doc['cep'],
+            cidade: doc['cidade'],
+            endereco: doc['endereco'],
+            ensino: doc['ensino'],
+            nome: doc['nome'],
+            numero: doc['numero'],
+            numeroRegistro: doc['numeroRegistro'],
+          )
+        );
+      }
+
+      setState(() {});
+
+      if (escolasLista.isEmpty) {
+        showSnackBar(context, 'Nenhuma escola encontrada', Cores.erro);
+      }
+    } else {
+      carregarEscolas();
+      showSnackBar(context, 'Digite pelo menos 1 caracter para pesquisar', Cores.erro);
     }
+
     setState(() {});
   }
 
@@ -228,11 +255,38 @@ class _EscolasTelaState extends State<EscolasTela> {
     );
   }
 
+  carregarEscolas(){
+    FirebaseFirestore.instance.collection('escolas')
+        .orderBy('nome')
+        .where('status',isNotEqualTo: 'inativo')
+        .get().then((escolasDoc){
+      for(int i = 0; escolasDoc.docs.length > i;i++){
+        escolasLista.add(
+            EscolaModelo(
+              idEscola: escolasDoc.docs[i].id,
+              bairro: escolasDoc.docs[i]['bairro'],
+              cep: escolasDoc.docs[i]['cep'],
+              cidade: escolasDoc.docs[i]['cidade'],
+              endereco: escolasDoc.docs[i]['endereco'],
+              ensino: escolasDoc.docs[i]['ensino'],
+              nome: escolasDoc.docs[i]['nome'],
+              numero: escolasDoc.docs[i]['numero'],
+              numeroRegistro: escolasDoc.docs[i]['numeroRegistro'],
+            )
+        );
+      }
+      setState(() {});
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    carregarEscolas();
+  }
+
   @override
   Widget build(BuildContext context) {
-
-    double altura = MediaQuery.of(context).size.height;
-    double largura = MediaQuery.of(context).size.width;
 
     return Scaffold(
       appBar: AppBar(
@@ -262,7 +316,7 @@ class _EscolasTelaState extends State<EscolasTela> {
                 children: [
                   InputPadrao(
                     controller: pesquisar,
-                    titulo: 'Pesquisar pelo nome da escola',
+                    titulo: 'Pesquisar pelo nome da escola ou registro',
                     largura: 400,
                   ),
                   SizedBox(width: 20,),

@@ -25,18 +25,7 @@ class ProfessoresTela extends StatefulWidget {
 class _ProfessoresTelaState extends State<ProfessoresTela> {
 
   TextEditingController nome = TextEditingController();
-  TextEditingController ensino = TextEditingController();
-  TextEditingController curso = TextEditingController();
-  TextEditingController ano = TextEditingController();
-  TextEditingController endereco = TextEditingController();
-  TextEditingController numero = TextEditingController();
-  TextEditingController bairro = TextEditingController();
-  TextEditingController cidade = TextEditingController();
-  TextEditingController idade = TextEditingController();
-  TextEditingController cep = TextEditingController();
   TextEditingController numeroRegistro = TextEditingController();
-  TextEditingController formacao = TextEditingController();
-  TextEditingController estadoCivil = TextEditingController();
   TextEditingController pesquisar = TextEditingController();
   bool salvando = false;
   bool exibirCampos = false;
@@ -97,51 +86,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
     if(escolaSelecionadaCadastro!=null){
       if(disciplinasSelecionadas.isNotEmpty){
         if(nome.text.length>5){
-          if(curso.text.length>2){
-            if(ano.text.length==4){
-              if(ensino.text.length>2){
-                if(formacao.text.length>2){
-                  if(endereco.text.length>2){
-                    if(numero.text.isNotEmpty){
-                      if(bairro.text.length>2){
-                        if(cidade.text.length>2){
-                          if(cep.text.length==10){
-                            if(estadoCivil.text.length>2){
-                              if(idade.text.isNotEmpty){
-                                idProfessor.isEmpty?salvarProfessor():editarProfessor();
-                              }else{
-                                showSnackBar(context, 'Idade Incompleta', Cores.erro);
-                              }
-                            }else{
-                              showSnackBar(context, 'Estado Cívil Incompleto', Cores.erro);
-                            }
-                          }else{
-                            showSnackBar(context, 'CEP Incompleto', Cores.erro);
-                          }
-                        }else{
-                          showSnackBar(context, 'Cidade Incompleta', Cores.erro);
-                        }
-                      }else{
-                        showSnackBar(context, 'Bairro Incompleto', Cores.erro);
-                      }
-                    }else{
-                      showSnackBar(context, 'Número Incompleto', Cores.erro);
-                    }
-                  }else{
-                    showSnackBar(context, 'Endereço Incompleto', Cores.erro);
-                  }
-                }else{
-                  showSnackBar(context, 'Formação Incompleta', Cores.erro);
-                }
-              }else{
-                showSnackBar(context, 'Ensino Incompleto', Cores.erro);
-              }
-            }else{
-              showSnackBar(context, 'Ano Incompleto', Cores.erro);
-            }
-          }else{
-            showSnackBar(context, 'Curso Incompleto', Cores.erro);
-          }
+          idProfessor.isEmpty?salvarProfessor():editarProfessor();
         }else{
           showSnackBar(context, 'Nome Incompleto', Cores.erro);
         }
@@ -170,34 +115,12 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
       'idDisciplinas' : idDisciplinas,
-      'bairro'        : bairro.text.toUpperCase(),
-      'cep'           : cep.text,
-      'cidade'        : cidade.text.toUpperCase(),
-      'idade'         : int.parse(idade.text),
-      'endereco'      : endereco.text.toUpperCase(),
-      'numero'        : int.parse(numero.text),
       'numeroRegistro': numeroRegistro.text,
-      'curso'         : curso.text.toUpperCase(),
-      'formacao'      : formacao.text.toUpperCase(),
-      'ano'           : int.parse(ano.text),
-      'ensino'        : ensino.text.toUpperCase(),
-      'estadoCivil'   : estadoCivil.text.toUpperCase(),
       'status'          : 'ativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
       disciplinasSelecionadas = [];
       nome.clear();
-      estadoCivil.clear();
-      idade.clear();
-      curso.clear();
-      ano.clear();
-      formacao.clear();
-      endereco.clear();
-      numero.clear();
-      bairro.clear();
-      cidade.clear();
-      ensino.clear();
-      cep.clear();
       numeroRegistro.clear();
       salvando = false;
       setState(() {});
@@ -222,34 +145,12 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
       'idDisciplinas' : idDisciplinas,
-      'bairro'        : bairro.text.toUpperCase(),
-      'cep'           : cep.text,
-      'cidade'        : cidade.text.toUpperCase(),
-      'idade'         : int.parse(idade.text),
-      'endereco'      : endereco.text.toUpperCase(),
-      'numero'        : int.parse(numero.text),
       'numeroRegistro': numeroRegistro.text,
-      'curso'         : curso.text.toUpperCase(),
-      'formacao'      : formacao.text.toUpperCase(),
-      'ano'           : int.parse(ano.text),
-      'ensino'        : ensino.text.toUpperCase(),
-      'estadoCivil'   : estadoCivil.text.toUpperCase(),
     }).then((_){
       escolaSelecionadaCadastro = null;
       escolaSelecionadaPesquisa = null;
       disciplinasSelecionadas = [];
       nome.clear();
-      estadoCivil.clear();
-      idade.clear();
-      curso.clear();
-      ano.clear();
-      formacao.clear();
-      endereco.clear();
-      numero.clear();
-      bairro.clear();
-      cidade.clear();
-      ensino.clear();
-      cep.clear();
       numeroRegistro.clear();
 
       idProfessor = '';
@@ -312,18 +213,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
   preencherCampos(ProfessorModelo professor){
     idProfessor = professor.idProf;
     nome.text = professor.nomeProf;
-    bairro.text = professor.bairro;
-    cep.text = professor.cep;
-    cidade.text = professor.cidade;
-    endereco.text = professor.endereco;
-    numero.text = professor.numero.toString();
     numeroRegistro.text = professor.numeroRegistro;
-    estadoCivil.text = professor.estadoCivil;
-    idade.text = professor.idade.toString();
-    formacao.text = professor.formacao;
-    ensino.text = professor.ensino;
-    curso.text = professor.curso;
-    ano.text = professor.ano.toString();
     List idsDisciplinas = professor.idDisciplinas;
     exibirCampos = true;
     professoresLista.clear();
@@ -389,17 +279,6 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
       escolaSelecionadaCadastro = null;
       disciplinasSelecionadas = [];
       nome.clear();
-      estadoCivil.clear();
-      idade.clear();
-      curso.clear();
-      ano.clear();
-      formacao.clear();
-      endereco.clear();
-      numero.clear();
-      bairro.clear();
-      cidade.clear();
-      ensino.clear();
-      cep.clear();
       numeroRegistro.clear();
       salvando = false;
       idProfessor = '';
@@ -494,16 +373,6 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
                                     escolaSelecionadaPesquisa = null;
                                     escolaSelecionadaCadastro = null;
                                     nome.clear();
-                                    estadoCivil.clear();
-                                    idade.clear();
-                                    curso.clear();
-                                    ano.clear();
-                                    ensino.clear();
-                                    endereco.clear();
-                                    numero.clear();
-                                    bairro.clear();
-                                    cidade.clear();
-                                    cep.clear();
                                     numeroRegistro.clear();
                                     disciplinasSelecionadas.clear();
                                     setState(() {});
@@ -566,7 +435,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
                                   ),
                                 ),
                                 disciplinaMultiple.isEmpty?Container():Container(
-                                  height: disciplinasSelecionadas.isEmpty?80:130,
+                                  height: disciplinasSelecionadas.isEmpty?80:(80+(disciplinasSelecionadas.length.toDouble()*40)),
                                   width: 250,
                                   alignment:Alignment.bottomCenter,
                                   child: ListView(
@@ -610,133 +479,10 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
                             controller: nome,
                             largura: 485,
                           ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Estado Cívil *',
-                                  controller: estadoCivil,
-                                  largura: 230,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Idade *',
-                                  controller: idade,
-                                  largura: 230,
-                                  textInputType: TextInputType.number,
-                                  maximoCaracteres: 2,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Curso *',
-                                  controller: curso,
-                                  largura: 230,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Ano *',
-                                  controller: ano,
-                                  largura: 230,
-                                  textInputType: TextInputType.number,
-                                  maximoCaracteres: 4,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Ensino *',
-                                  controller: ensino,
-                                  largura: 230,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Formação *',
-                                  controller: formacao,
-                                  largura: 230,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 490,
-                            child:
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Endereço *',
-                                  controller: endereco,
-                                  largura: 370,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Número *',
-                                  controller: numero,
-                                  largura: 100,
-                                  textInputType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Bairro *',
-                                  controller: bairro,
-                                  largura: 230,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Cidade *',
-                                  controller: cidade,
-                                  largura: 230,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'CEP *',
-                                  controller: cep,
-                                  largura: 230,
-                                  textInputType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    CepInputFormatter()
-                                  ],
-                                ),
-                                InputPadrao(
-                                  titulo: 'Número Registro',
-                                  controller: numeroRegistro,
-                                  largura: 230,
-                                ),
-                              ],
-                            ),
+                          InputPadrao(
+                            titulo: 'Número Registro',
+                            controller: numeroRegistro,
+                            largura: 485,
                           ),
                           BotaoPadrao(
                             titulo: idProfessor.isEmpty?'Salvar':'Alterar',

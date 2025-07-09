@@ -21,6 +21,7 @@ class TextoPadrao extends StatelessWidget {
     return Text(
       texto,
       textAlign: textAling,
+      maxLines: 2,
       style: TextStyle(
         color: corTexto,
         fontSize: tamanhoTexto,

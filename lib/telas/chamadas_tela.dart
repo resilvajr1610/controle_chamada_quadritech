@@ -115,6 +115,7 @@ class _ChamadasTelaState extends State<ChamadasTela> {
               nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
               idAluno: chamadasDoc.docs[i]['alunoId'],
               nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
+              urlImagem: chamadasDoc.docs[i]['urlImagem'],
               idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
               nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
               dataHora: chamadasDoc.docs[i]['dataHora'],
@@ -194,6 +195,7 @@ class _ChamadasTelaState extends State<ChamadasTela> {
               idEscola: chamadasDoc.docs[i]['idEscola'],
               nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
               idAluno: chamadasDoc.docs[i]['alunoId'],
+              urlImagem: chamadasDoc.docs[i]['urlImagem'],
               nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
               idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
               nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
@@ -232,6 +234,7 @@ class _ChamadasTelaState extends State<ChamadasTela> {
               idEscola: chamadasDoc.docs[i]['idEscola'],
               nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
               idAluno: chamadasDoc.docs[i]['alunoId'],
+              urlImagem: chamadasDoc.docs[i]['urlImagem'],
               nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
               idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
               nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
@@ -409,6 +412,22 @@ class _ChamadasTelaState extends State<ChamadasTela> {
                                     padding: EdgeInsets.symmetric(vertical: 10,horizontal: 30),
                                     child: Row(
                                       children: [
+                                        Center(
+                                          child: CircleAvatar(
+                                            backgroundColor: Colors.grey,
+                                            maxRadius: 50,
+                                            backgroundImage: alunosListaFiltrada[i].urlImagem.isNotEmpty
+                                                ? NetworkImage(alunosListaFiltrada[i].urlImagem)
+                                                : null,
+                                            child: alunosListaFiltrada[i].urlImagem.isEmpty
+                                                ? Icon(
+                                              Icons.person,
+                                              size: 30,
+                                              color: Colors.white,
+                                            )
+                                                : null,
+                                          ),
+                                        ),
                                         TextoPadrao(
                                           texto: '${ConverterDataModelo().formatarTimestamp(alunosListaFiltrada[i].dataHora)} - ${alunosListaFiltrada[i].nomeAluno}',
                                           corTexto: Cores.corPrincipal,

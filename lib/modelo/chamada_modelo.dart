@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ChamadaModelo {
   String idPresenca;
   String idAluno;
+  String urlImagem;
   String nomeAluno;
   String idEscola;
   String nomeEscola;
@@ -14,6 +15,7 @@ class ChamadaModelo {
   ChamadaModelo({
     required this.idPresenca,
     required this.idAluno,
+    required this.urlImagem,
     required this.nomeAluno,
     required this.idEscola,
     required this.nomeEscola,

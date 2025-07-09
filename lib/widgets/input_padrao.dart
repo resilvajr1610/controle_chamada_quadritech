@@ -28,7 +28,10 @@ class InputPadrao extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextoPadrao(texto: titulo,corTexto: Cores.corPrincipal,tamanhoTexto: 18,),
+        Container(
+          width: largura,
+          child: TextoPadrao(texto: titulo,corTexto: Cores.corPrincipal,tamanhoTexto: 18,textAling: TextAlign.start,)
+        ),
         Container(
           width: largura,
           padding: EdgeInsets.symmetric(horizontal: 10),
