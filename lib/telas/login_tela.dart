@@ -42,7 +42,7 @@ class _LoginTelaState extends State<LoginTela> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextoPadrao(
-              texto: 'versão : 1.0.1+2',
+              texto: 'versão : 1.0.3+4',
               corTexto: Cores.corPrincipal,
               tamanhoTexto: 10,
             ),

@@ -35,8 +35,8 @@ class _ChamadasTelaState extends State<ChamadasTela> {
   List<ChamadaModelo> alunosListaFiltrada = [];
   List<ProfessorChamadaModelo> professoresBanco = [];
   ProfessorChamadaModelo? professorSelecionado;
-  List<AlunoChamadaModelo> alunosBanco = [];
-  AlunoChamadaModelo? alunoSelecionado;
+  List<RegistrosChamadaModelo> alunosBanco = [];
+  RegistrosChamadaModelo? alunoSelecionado;
   TextEditingController calendario = TextEditingController();
   DisciplinaModelo? disciplinaSelecionada;
   List<DisciplinaModelo> disciplinasLista = [];
@@ -96,56 +96,99 @@ class _ChamadasTelaState extends State<ChamadasTela> {
     });
   }
 
-  carregarPresencas(){
+  carregarPresencas() {
     alunosListaTodas.clear();
     alunosListaFiltrada.clear();
     alunosBanco.clear();
     alunoSelecionado = null;
     setState(() {});
-    FirebaseFirestore.instance.collection('presencas')
-        .where('idDisciplina',isEqualTo: disciplinaSelecionada!.idDisciplina)
-        .orderBy('dataHora').get().then((chamadasDoc){
 
-      List idsAlunos = [];
-      for(int i = 0; chamadasDoc.docs.length > i;i++){
+    FirebaseFirestore.instance
+        .collection('presencas')
+        .where('idDisciplina', isEqualTo: disciplinaSelecionada!.idDisciplina)
+        .orderBy('dataHora')
+        .get()
+        .then((chamadasDoc) {
+      List<String> idsAlunos = [];
+
+      for (var doc in chamadasDoc.docs) {
         alunosListaTodas.add(
-            ChamadaModelo(
-              idPresenca: chamadasDoc.docs[i].id,
-              idEscola: chamadasDoc.docs[i]['idEscola'],
-              nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
-              idAluno: chamadasDoc.docs[i]['alunoId'],
-              nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
-              urlImagem: chamadasDoc.docs[i]['urlImagem'],
-              idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
-              nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
-              dataHora: chamadasDoc.docs[i]['dataHora'],
-              situacao: chamadasDoc.docs[i]['situacao'],
-            )
+          ChamadaModelo(
+            idPresenca: doc.id,
+            idEscola: doc['idEscola'],
+            nomeEscola: doc['nomeEscola'],
+            idReconhecido: doc['idReconhecido'],
+            nomeAluno: doc['nome'],
+            urlImagem: doc['urlImagem'],
+            idDisciplina: doc['idDisciplina'],
+            nomeDisciplina: doc['nomeDisciplina'],
+            dataHora: doc['dataHora'],
+            situacao: doc['situacao'],
+            tipo: doc['tipo'],
+          ),
         );
-        if(!idsAlunos.contains(chamadasDoc.docs[i]['alunoId'])){
+
+        // Adiciona ao banco se ainda não está
+        if (!idsAlunos.contains(doc['idReconhecido'])) {
           alunosBanco.add(
-              AlunoChamadaModelo(
-                idAluno: chamadasDoc.docs[i]['alunoId'],
-                nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
-              )
+            RegistrosChamadaModelo(
+              id: doc['idReconhecido'],
+              nome: doc['nome'],
+            ),
           );
-          idsAlunos.add(chamadasDoc.docs[i]['alunoId']);
+          idsAlunos.add(doc['idReconhecido']);
         }
       }
-      alunosListaFiltrada.addAll(alunosListaTodas);
-      if(alunosListaTodas.isEmpty){
-        showSnackBar(context, 'Nenhum(a) chamada encontrada', Cores.erro);
-      }
-      setState(() {});
-    });
 
-    setState(() {});
+      // Agora buscar todos os alunos da disciplina
+      FirebaseFirestore.instance
+          .collection('alunos')
+          .where('idDisciplinas', arrayContains: disciplinaSelecionada!.idDisciplina)
+          .get()
+          .then((alunosDoc) {
+        for (var doc in alunosDoc.docs) {
+          String idAluno = doc.id;
+
+          if (!idsAlunos.contains(idAluno)) {
+            // Aluno da disciplina, mas não teve presença → FALTA
+            alunosListaTodas.add(
+              ChamadaModelo(
+                idPresenca: '',
+                idEscola: doc['idEscola'],
+                nomeEscola: doc['nomeEscola'],
+                idReconhecido: idAluno,
+                nomeAluno: doc['nomeAluno'],
+                urlImagem: doc['urlImagem'],
+                idDisciplina: disciplinaSelecionada!.idDisciplina,
+                nomeDisciplina: disciplinaSelecionada!.nomeDisciplina,
+                dataHora: Timestamp.fromDate(DateTime.now()),
+                situacao: 'FALTA',
+                tipo: 'aluno',
+              ),
+            );
+
+            alunosBanco.add(
+              RegistrosChamadaModelo(
+                id: idAluno,
+                nome: doc['nomeAluno'],
+              ),
+            );
+          }
+        }
+
+        alunosListaFiltrada = List.from(alunosListaTodas);
+        if (alunosListaTodas.isEmpty) {
+          showSnackBar(context, 'Nenhum(a) chamada encontrada', Cores.erro);
+        }
+        setState(() {});
+      });
+    });
   }
 
   filtrarAlunos(String alunoId){
     alunosListaFiltrada.clear();
     for(int i = 0; alunosListaTodas.length>i; i++){
-      if(alunosListaTodas[i].idAluno == alunoId){
+      if(alunosListaTodas[i].idReconhecido == alunoId){
         alunosListaFiltrada.add(alunosListaTodas[i]);
       }
     }
@@ -194,13 +237,14 @@ class _ChamadasTelaState extends State<ChamadasTela> {
               idPresenca: chamadasDoc.docs[i].id,
               idEscola: chamadasDoc.docs[i]['idEscola'],
               nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
-              idAluno: chamadasDoc.docs[i]['alunoId'],
+              idReconhecido: chamadasDoc.docs[i]['idReconhecido'],
               urlImagem: chamadasDoc.docs[i]['urlImagem'],
-              nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
+              nomeAluno: chamadasDoc.docs[i]['nome'],
               idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
               nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
               dataHora: chamadasDoc.docs[i]['dataHora'],
               situacao: chamadasDoc.docs[i]['situacao'],
+              tipo: chamadasDoc.docs[i]['tipo'],
             )
         );
       }
@@ -217,13 +261,13 @@ class _ChamadasTelaState extends State<ChamadasTela> {
     final fimDoDia = inicioDoDia.add(const Duration(days: 1));
     alunosListaFiltrada.clear();
 
-    print(alunoSelecionado!.nomeAluno);
+    print(alunoSelecionado!.nome);
 
     await FirebaseFirestore.instance
         .collection('presencas')
         .where('dataHora', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
         .where('dataHora', isLessThan: Timestamp.fromDate(fimDoDia))
-        .where('alunoId',isEqualTo: alunoSelecionado!.idAluno)
+        .where('alunoId',isEqualTo: alunoSelecionado!.id)
         .orderBy('dataHora')
         .get().then((chamadasDoc){
       print('chamadas: ${chamadasDoc.docs.length}');
@@ -233,13 +277,14 @@ class _ChamadasTelaState extends State<ChamadasTela> {
               idPresenca: chamadasDoc.docs[i].id,
               idEscola: chamadasDoc.docs[i]['idEscola'],
               nomeEscola: chamadasDoc.docs[i]['nomeEscola'],
-              idAluno: chamadasDoc.docs[i]['alunoId'],
+              idReconhecido: chamadasDoc.docs[i]['idReconhecido'],
               urlImagem: chamadasDoc.docs[i]['urlImagem'],
-              nomeAluno: chamadasDoc.docs[i]['nomeAluno'],
+              nomeAluno: chamadasDoc.docs[i]['nome'],
               idDisciplina: chamadasDoc.docs[i]['idDisciplina'],
               nomeDisciplina: chamadasDoc.docs[i]['nomeDisciplina'],
               dataHora: chamadasDoc.docs[i]['dataHora'],
               situacao: chamadasDoc.docs[i]['situacao'],
+              tipo: chamadasDoc.docs[i]['tipo'],
             )
         );
       }
@@ -369,14 +414,14 @@ class _ChamadasTelaState extends State<ChamadasTela> {
                                 width: 350,
                                 child: DropdownAlunoChamada(
                                   selecionado: alunoSelecionado,
-                                  titulo: 'Alunos',
+                                  titulo: 'Registrados',
                                   lista: alunosBanco,
                                   largura: 400,
                                   larguraContainer: 300,
                                   onChanged: (valor){
                                     alunoSelecionado = valor;
                                     if(calendario.text.length!=10){
-                                      filtrarAlunos(alunoSelecionado!.idAluno);
+                                      filtrarAlunos(alunoSelecionado!.id);
                                     }else{
                                       List data = calendario.text.split('/');
                                       print(data);

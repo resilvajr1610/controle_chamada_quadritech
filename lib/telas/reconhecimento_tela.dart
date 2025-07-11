@@ -89,18 +89,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
               idEscola: professoresDoc.docs[i]['idEscola'],
               nomeEscola: professoresDoc.docs[i]['nomeEscola'],
               idDisciplinas: professoresDoc.docs[i]['idDisciplinas'],
-              ensino: '',
-              ano: 0,
-              curso: professoresDoc.docs[i]['curso'],
-              cidade: '',
-              estadoCivil: '',
-              bairro: '',
-              cep: '',
-              endereco: '',
-              formacao: '',
-              idade: 0,
-              numero: 0,
-              numeroRegistro: ''
+              numeroRegistro: '',
+              urlImagem: ''
             )
         );
       }
@@ -188,9 +178,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        // Uri.parse('http://localhost:5000/verificar'),
-        // Uri.parse('http://54.83.152.11:5000/verificar'),
-        Uri.parse('https://presenca.quadritech.com.br/valida'),
+        Uri.parse('http://localhost:5000/verificar'),
+        // Uri.parse('https://presenca.quadritech.com.br/valida'),
       )
         ..fields['id_disciplina'] = disciplinaSelecionada!.idDisciplina
         ..files.add(http.MultipartFile.fromBytes(
@@ -209,9 +198,9 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
         final data = jsonDecode(body);
         final verificado = data['verificado'] ?? false;
         if(verificado){
-          int diferenca = await verificarDiferencaUltimaPresenca(data['aluno_id']);
+          int diferenca = await verificarDiferencaUltimaPresenca(data['id']);
           if(diferenca>=10){
-            String situacao = await obterProximaSituacao(data['aluno_id']);
+            String situacao = await obterProximaSituacao(data['id']);
             status = 'salvando captura ...';
             aguardando = true;
             salvarFoto(data,situacao,frame);
@@ -233,14 +222,14 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     }
   }
 
-  Future<String> obterProximaSituacao(String alunoId) async {
+  Future<String> obterProximaSituacao(String id) async {
     final agora = DateTime.now();
     final inicioDoDia = DateTime(agora.year, agora.month, agora.day);
 
     // Busca apenas os registros daquele aluno, daquela disciplina, no dia atual
     final snapshot = await FirebaseFirestore.instance
         .collection('presencas')
-        .where('alunoId', isEqualTo: alunoId)
+        .where('id', isEqualTo: id)
         .where('idDisciplina', isEqualTo: disciplinaSelecionada!.idDisciplina)
         .where('dataHora', isGreaterThanOrEqualTo: Timestamp.fromDate(inicioDoDia))
         .orderBy('dataHora', descending: true)
@@ -276,11 +265,12 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
       'nomeEscola'    : escolaSelecionada!.nome,
       'idProfessor'   : professorSelecionado!.idProf,
       'nomeProfessor' : professorSelecionado!.nomeProf,
-      'nomeAluno'     : resposta['aluno'],
-      'alunoId'       : resposta['aluno_id'],
+      'nome'          : resposta['nome'],
+      'idReconhecido' : resposta['id'],
       'dataHora'      : DateTime.now(),
       'situacao'      : situacao,
-      'urlImagem'     : urlImagem
+      'urlImagem'     : urlImagem,
+      'tipo'          : resposta['tipo']
     });
     status = '';
     showSnackBar(context, 'Presença Registrada para o(a) aluno(a) ${resposta['aluno']}', Colors.green);
@@ -297,17 +287,17 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     }
 
     FirebaseStorage storage = FirebaseStorage.instance;
-    Reference reference = storage.ref('reconhecimento/fotos/').child(nomeImagem);
+    Reference reference = storage.ref('reconhecimento/${resposta['tipo']}/fotos/').child(nomeImagem);
     UploadTask uploadTaskSnapshot = reference.putData(arquivoSelecionado);
     final TaskSnapshot downloadUrl = await uploadTaskSnapshot;
     String urlImagem = (await downloadUrl.ref.getDownloadURL());
     registrarPresenca(resposta,situacao,frame,urlImagem);
   }
 
-  Future<int> verificarDiferencaUltimaPresenca(String alunoId) async {
+  Future<int> verificarDiferencaUltimaPresenca(String id) async {
     final snapshot = await FirebaseFirestore.instance
         .collection('presencas')
-        .where('alunoId', isEqualTo: alunoId)
+        .where('id', isEqualTo: id)
         .where('idDisciplina', isEqualTo: disciplinaSelecionada!.idDisciplina)
         .orderBy('dataHora', descending: true)
         .limit(1)

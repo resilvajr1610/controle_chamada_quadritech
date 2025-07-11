@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:controle_chamada_quadritech/modelo/professor_modelo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -12,8 +14,9 @@ import '../widgets/input_padrao.dart';
 import '../widgets/menu_web.dart';
 import '../widgets/snackbar.dart';
 import '../widgets/texto_padrao.dart';
-import 'package:brasil_fields/brasil_fields.dart';
 import 'package:multi_select_flutter/multi_select_flutter.dart';
+import 'dart:html' as html;
+import 'package:firebase_storage/firebase_storage.dart';
 
 class ProfessoresTela extends StatefulWidget {
   const ProfessoresTela({super.key});
@@ -37,6 +40,8 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
   List disciplinasSelecionadas = [];
   String idProfessor = '';
   List<MultiSelectItem> disciplinaMultiple = [];
+  Uint8List? imagemweb;
+  String urlImagem = '';
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -82,11 +87,40 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
     });
   }
 
+  carregarProfessor(String idEscola){
+    professoresLista.clear();
+    FirebaseFirestore.instance.collection('professores').where('idEscola',isEqualTo: idEscola).get().then((profDocs) {
+      profDocs.docs.forEach((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        professoresLista.add(
+            ProfessorModelo(
+              idProf: doc.id,
+              nomeProf: doc['nomeProf'],
+              idEscola: doc['idEscola'],
+              nomeEscola: doc['nomeEscola'],
+              numeroRegistro: doc['numeroRegistro'],
+              idDisciplinas: doc['idDisciplinas'],
+              urlImagem: data.containsKey('urlImagem') ? data['urlImagem'] : '',
+            )
+        );
+      });
+      setState(() {});
+    });
+  }
+
   verificarCampos(){
     if(escolaSelecionadaCadastro!=null){
       if(disciplinasSelecionadas.isNotEmpty){
         if(nome.text.length>5){
-          idProfessor.isEmpty?salvarProfessor():editarProfessor();
+          if(imagemweb!=null || urlImagem.isNotEmpty){
+            if(imagemweb!=null){
+              salvarFoto();
+            }else{
+              idProfessor.isEmpty?salvarProfessor():editarProfessor();
+            }
+          }else{
+            showSnackBar(context, 'Selecione uma foto do rosto do aluno(a) para avançar', Colors.red);
+          }
         }else{
           showSnackBar(context, 'Nome Incompleto', Cores.erro);
         }
@@ -116,6 +150,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
       'idDisciplinas' : idDisciplinas,
       'numeroRegistro': numeroRegistro.text,
+      'urlImagem'     : urlImagem,
       'status'          : 'ativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
@@ -146,6 +181,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
       'idDisciplinas' : idDisciplinas,
       'numeroRegistro': numeroRegistro.text,
+      'urlImagem'     : urlImagem,
     }).then((_){
       escolaSelecionadaCadastro = null;
       escolaSelecionadaPesquisa = null;
@@ -173,6 +209,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
             .endAt(['${pesquisar.text.toUpperCase()}\uf8ff']).get().then((professoresDoc){
 
           for(int i = 0; professoresDoc.docs.length > i;i++){
+            final data = professoresDoc.docs[i].data() as Map<String, dynamic>;
             professoresLista.add(
                 ProfessorModelo(
                   idEscola: professoresDoc.docs[i]['idEscola'],
@@ -180,18 +217,8 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
                   idProf: professoresDoc.docs[i].id,
                   nomeProf: professoresDoc.docs[i]['nomeProf'],
                   idDisciplinas: professoresDoc.docs[i]['idDisciplinas'],
-                  cep:  professoresDoc.docs[i]['cep'],
-                  formacao:  professoresDoc.docs[i]['formacao'],
-                  cidade:  professoresDoc.docs[i]['cidade'],
-                  bairro:  professoresDoc.docs[i]['bairro'],
-                  numero:  professoresDoc.docs[i]['numero'],
-                  endereco:  professoresDoc.docs[i]['endereco'],
                   numeroRegistro:  professoresDoc.docs[i]['numeroRegistro'],
-                  estadoCivil:  professoresDoc.docs[i]['estadoCivil'],
-                  idade:  professoresDoc.docs[i]['idade'],
-                  curso: professoresDoc.docs[i]['curso'],
-                  ano: professoresDoc.docs[i]['ano'],
-                  ensino: professoresDoc.docs[i]['ensino'],
+                  urlImagem: data.containsKey('urlImagem') ? data['urlImagem'] : '',
                 )
             );
           }
@@ -213,6 +240,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
   preencherCampos(ProfessorModelo professor){
     idProfessor = professor.idProf;
     nome.text = professor.nomeProf;
+    urlImagem = professor.urlImagem;
     numeroRegistro.text = professor.numeroRegistro;
     List idsDisciplinas = professor.idDisciplinas;
     exibirCampos = true;
@@ -288,6 +316,50 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
     });
   }
 
+  adionarFoto() {
+    html.FileUploadInputElement uploadInput = html.FileUploadInputElement();
+    uploadInput.accept = 'image/*';
+    uploadInput.click();
+    html.document.body!.append(uploadInput);
+    uploadInput.onChange.listen((e) async {
+      final files = uploadInput.files;
+      final file = files![0];
+      final reader = html.FileReader();
+
+      reader.onLoadEnd.listen((e) {
+        var _bytesData = Base64Decoder().convert(reader.result.toString().split(",").last);
+        setState(() {
+          imagemweb = _bytesData;
+          urlImagem = '';
+        });
+      });
+      reader.readAsDataUrl(file);
+    });
+    uploadInput.remove();
+  }
+
+  salvarFoto() async {
+    salvando = true;
+    setState(() {});
+
+    String nomeImagem = 'aluno_${DateTime.now().toIso8601String()}.jpg';
+    Uint8List arquivoSelecionado = imagemweb!;
+
+    if (arquivoSelecionado.isEmpty) {
+      return;
+    }
+
+    FirebaseStorage storage = FirebaseStorage.instance;
+    Reference reference = storage.ref('professores/fotos/').child(nomeImagem);
+    UploadTask uploadTaskSnapshot = reference.putData(arquivoSelecionado);
+
+    final TaskSnapshot downloadUrl = await uploadTaskSnapshot;
+    urlImagem = (await downloadUrl.ref.getDownloadURL());
+    Future.delayed(Duration(seconds: 1),(){
+      idProfessor.isEmpty?salvarProfessor():editarProfessor();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -342,6 +414,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
                                 escolaSelecionadaPesquisa = valor;
                                 pesquisar.clear();
                                 carregarDisciplinasEscola(escolaSelecionadaPesquisa!.idEscola);
+                                carregarProfessor(escolaSelecionadaPesquisa!.idEscola);
                                 setState(() {});
                               },
                             ),
@@ -412,6 +485,23 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          InkWell(
+                            onTap: () => adionarFoto(),
+                            child: CircleAvatar(
+                              backgroundColor: Colors.grey,
+                              maxRadius: 50,
+                              backgroundImage: urlImagem.isNotEmpty
+                                  ? NetworkImage(urlImagem)
+                                  : (imagemweb != null ? MemoryImage(imagemweb!) : null) as ImageProvider?,
+                              child: imagemweb == null && urlImagem.isEmpty
+                                  ? Icon(
+                                Icons.add_a_photo,
+                                size: 30,
+                                color: Colors.white,
+                              )
+                                  : null,
+                            ),
+                          ),
                           Container(
                             width: 500,
                             child: Row(

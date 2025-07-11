@@ -1,9 +1,9 @@
-class AlunoChamadaModelo {
-  String idAluno;
-  String nomeAluno;
+class RegistrosChamadaModelo {
+  String id;
+  String nome;
 
-  AlunoChamadaModelo({
-    required this.idAluno,
-    required this.nomeAluno,
+  RegistrosChamadaModelo({
+    required this.id,
+    required this.nome,
   });
 }

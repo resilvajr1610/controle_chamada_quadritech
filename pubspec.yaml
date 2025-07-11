@@ -1,7 +1,7 @@
 name: controle_chamada_quadritech
 description: "Gerenciamento escolar"
 publish_to: 'none'
-version: 1.0.2+3
+version: 1.0.3+4
 
 environment:
   sdk: '>=3.4.3 <4.0.0'

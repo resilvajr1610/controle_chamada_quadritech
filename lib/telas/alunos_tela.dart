@@ -330,7 +330,6 @@ class _AlunosTelaState extends State<AlunosTela> {
     setState(() {});
   }
 
-
   preencherCampos(AlunoModelo aluno){
     idAluno = aluno.idAluno;
     nome.text = aluno.nomeAluno;

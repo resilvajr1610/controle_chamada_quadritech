@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 
 class DropdownAlunoChamada extends StatelessWidget {
   var onChanged;
-  AlunoChamadaModelo? selecionado;
+  RegistrosChamadaModelo? selecionado;
   String titulo;
   double tamanhoFonte;
-  List<AlunoChamadaModelo> lista;
+  List<RegistrosChamadaModelo> lista;
   double largura;
   double larguraContainer;
   String hint;
@@ -53,7 +53,7 @@ class DropdownAlunoChamada extends StatelessWidget {
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 0.0),
                       child: TextoPadrao(
-                        texto: value.nomeAluno,
+                        texto: value.nome,
                         tamanhoTexto: tamanhoFonte,
                         corTexto: Colors.black,
                         textAling: TextAlign.start,
