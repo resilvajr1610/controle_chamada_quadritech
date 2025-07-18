@@ -150,7 +150,6 @@ class _ChamadasTelaState extends State<ChamadasTela> {
           String idAluno = doc.id;
 
           if (!idsAlunos.contains(idAluno)) {
-            // Aluno da disciplina, mas não teve presença → FALTA
             alunosListaTodas.add(
               ChamadaModelo(
                 idPresenca: '',

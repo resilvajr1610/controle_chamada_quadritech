@@ -346,7 +346,7 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
       body: Container(
         child: Column(
           children: [
-           MenuWeb(),
+            MenuWeb(),
             Container(
               height: altura*0.8,
               width: 390,
