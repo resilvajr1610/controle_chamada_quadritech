@@ -178,8 +178,8 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://localhost:5000/verificar'),
-        // Uri.parse('https://presenca.quadritech.com.br/valida'),
+        // Uri.parse('http://localhost:5000/verificar'),
+        Uri.parse('https://presenca.quadritech.com.br/valida'),
       )
         ..fields['id_disciplina'] = disciplinaSelecionada!.idDisciplina
         ..files.add(http.MultipartFile.fromBytes(

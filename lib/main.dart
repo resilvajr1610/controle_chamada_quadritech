@@ -21,7 +21,7 @@ void main() async {
       scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Controle de Chamadas Quadritech',
-      home: ChamadasTela(),
+      home: LoginTela(),
     )
   );
 }
