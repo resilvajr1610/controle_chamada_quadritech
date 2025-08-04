@@ -510,7 +510,7 @@ class _AlunosTelaState extends State<AlunosTela> {
                 color: Colors.white
             ),
             backgroundColor: Cores.corPrincipal,
-            title: TextoPadrao(texto: 'CADASTRO DE ALUNOS',)
+            title: TextoPadrao(texto: 'ALUNOS',)
         ),
         body: salvando?Center(
           child: Column(

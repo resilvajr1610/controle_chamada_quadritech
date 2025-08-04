@@ -289,7 +289,7 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
                 color: Colors.white
             ),
             backgroundColor: Cores.corPrincipal,
-            title: TextoPadrao(texto: 'CADASTRO DE DISCIPLINAS',)
+            title: TextoPadrao(texto: 'DISCIPLINAS',)
         ),
         body: salvando?Center(
           child: Column(

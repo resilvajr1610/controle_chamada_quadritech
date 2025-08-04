@@ -294,7 +294,7 @@ class _EscolasTelaState extends State<EscolasTela> {
             color: Colors.white
           ),
           backgroundColor: Cores.corPrincipal,
-          title: TextoPadrao(texto: 'CADASTRO DE ESCOLAS',)
+          title: TextoPadrao(texto: 'ESCOLAS',)
       ),
       body: salvando?Center(
         child: Column(

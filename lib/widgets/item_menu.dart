@@ -20,7 +20,7 @@ class ItemMenu extends StatelessWidget {
     return Card(
       child: Container(
         height: 50,
-        width: largura*0.1,
+        width: largura*0.09,
         child: ListTile(
           onTap: (){
             Navigator.pushReplacement(context, MaterialPageRoute(builder: (context)=> destino));
@@ -29,7 +29,7 @@ class ItemMenu extends StatelessWidget {
             negrito: true,
             texto: texto,
             corTexto: Cores.corPrincipal,
-            tamanhoTexto: largura*0.01,
+            tamanhoTexto: largura*0.0085,
           ),
         ),
       ),

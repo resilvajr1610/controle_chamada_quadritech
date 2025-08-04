@@ -1,12 +1,12 @@
 class TurmaModelo{
   String idTurma;
-  String turma;
+  String nomeTurma;
   String idEscola;
   String nomeEscola;
 
   TurmaModelo({
     required this.idTurma,
-    required this.turma,
+    required this.nomeTurma,
     required this.idEscola,
     required this.nomeEscola,
   });

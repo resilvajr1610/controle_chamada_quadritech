@@ -377,7 +377,7 @@ class _ProfessoresTelaState extends State<ProfessoresTela> {
                 color: Colors.white
             ),
             backgroundColor: Cores.corPrincipal,
-            title: TextoPadrao(texto: 'CADASTRO DE PROFESSORES',)
+            title: TextoPadrao(texto: 'PROFESSORES',)
         ),
         body: salvando?Center(
           child: Column(

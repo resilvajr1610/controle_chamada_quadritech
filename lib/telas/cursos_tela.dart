@@ -1,7 +1,7 @@
-import 'package:controle_chamada_quadritech/modelo/turma_modelo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../modelo/cores.dart';
+import '../modelo/curso_modelo.dart';
 import '../modelo/escola_modelo.dart';
 import '../widgets/botao_padrao.dart';
 import '../widgets/dropdown_escolas.dart';
@@ -10,24 +10,24 @@ import '../widgets/menu_web.dart';
 import '../widgets/snackbar.dart';
 import '../widgets/texto_padrao.dart';
 
-class TurmasTela extends StatefulWidget {
-  const TurmasTela({super.key});
+class CursosTela extends StatefulWidget {
+  const CursosTela({super.key});
 
   @override
-  State<TurmasTela> createState() => _TurmasTelaState();
+  State<CursosTela> createState() => _CursosTelaState();
 }
 
-class _TurmasTelaState extends State<TurmasTela> {
+class _CursosTelaState extends State<CursosTela> {
 
-  bool salvando = false;
-  bool exibirCampos = false;
+  List<EscolaModelo> escolasLista = [];
   EscolaModelo? escolaSelecionadaPesquisa;
   EscolaModelo? escolaSelecionadaCadastro;
-  List<EscolaModelo> escolasLista = [];
+  bool exibirCampos = false;
   TextEditingController pesquisar = TextEditingController();
   TextEditingController nome = TextEditingController();
-  List<TurmaModelo> turmasLista = [];
-  String idTurma = '';
+  List<CursoModelo> cursosLista = [];
+  String idCurso = '';
+  bool salvando = false;
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -54,35 +54,23 @@ class _TurmasTelaState extends State<TurmasTela> {
     });
   }
 
-  carregarTurmas(){
-    turmasLista.clear();
-    FirebaseFirestore.instance.collection('turmas')
-        .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
-        .where('status',isNotEqualTo: 'inativo')
-        .orderBy('turma').get().then((escolasDoc){
-
-      for(int i = 0; escolasDoc.docs.length > i;i++){
-        turmasLista.add(
-            TurmaModelo(
-              idEscola: escolasDoc.docs[i]['idEscola'],
-              nomeEscola: escolasDoc.docs[i]['nomeEscola'],
-              idTurma: escolasDoc.docs[i].id,
-              nomeTurma: escolasDoc.docs[i]['turma'],
-            )
-        );
+  preencherCampos(CursoModelo curso){
+    idCurso = curso.idCurso;
+    nome.text = curso.nomeCurso;
+    exibirCampos = true;
+    for(int i = 0; escolasLista.length>i; i++){
+      if(curso.idEscola == escolasLista[i].idEscola){
+        escolaSelecionadaCadastro = escolasLista[i];
+        break;
       }
-      print(turmasLista.length);
-      if(turmasLista.isEmpty){
-        showSnackBar(context, 'Nenhuma turma encontrada', Cores.erro);
-      }
-      setState(() {});
-    });
+    }
+    setState(() {});
   }
 
   verificarCampos(){
     if(escolaSelecionadaCadastro!=null){
       if(nome.text.isNotEmpty){
-        idTurma.isEmpty?salvarTurma():editarTurma();
+        idCurso.isEmpty?salvarCurso():editarCurso();
       }else{
         showSnackBar(context, 'Nome Incompleto', Cores.erro);
       }
@@ -91,32 +79,32 @@ class _TurmasTelaState extends State<TurmasTela> {
     }
   }
 
-  salvarTurma(){
+  salvarCurso(){
     salvando = true;
     setState(() {});
 
-    final docRef = FirebaseFirestore.instance.collection('turmas').doc();
-    FirebaseFirestore.instance.collection('turmas').doc(docRef.id).set({
-      'idEscola'      : escolaSelecionadaCadastro!.idEscola,
-      'nomeEscola'    : escolaSelecionadaCadastro!.nome,
-      'idTurma'  : docRef.id,
-      'turma': nome.text.toUpperCase(),
-      'status'          : 'ativo'
+    final docRef = FirebaseFirestore.instance.collection('cursos').doc();
+    FirebaseFirestore.instance.collection('cursos').doc(docRef.id).set({
+      'idEscola'  : escolaSelecionadaCadastro!.idEscola,
+      'nomeEscola': escolaSelecionadaCadastro!.nome,
+      'idCurso'   : docRef.id,
+      'curso'     : nome.text.toUpperCase(),
+      'status'    : 'ativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
       nome.clear();
       salvando = false;
       setState(() {});
-      carregarTurmas();
+      carregarCurso();
       showSnackBar(context, 'Salvo com sucesso', Colors.green);
     });
   }
 
-  editarTurma(){
+  editarCurso(){
     salvando = true;
     setState(() {});
 
-    FirebaseFirestore.instance.collection('turmas').doc(idTurma).update({
+    FirebaseFirestore.instance.collection('turmas').doc(idCurso).update({
       'idEscola'  : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola': escolaSelecionadaCadastro!.nome,
       'turma'     : nome.text.toUpperCase(),
@@ -129,17 +117,29 @@ class _TurmasTelaState extends State<TurmasTela> {
     });
   }
 
-  preencherCampos(TurmaModelo turma){
-    idTurma = turma.idTurma;
-    nome.text = turma.nomeTurma;
-    exibirCampos = true;
-    for(int i = 0; escolasLista.length>i; i++){
-      if(turma.idEscola == escolasLista[i].idEscola){
-        escolaSelecionadaCadastro = escolasLista[i];
-        break;
+  carregarCurso(){
+    cursosLista.clear();
+    FirebaseFirestore.instance.collection('cursos')
+        .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
+        .where('status',isNotEqualTo: 'inativo')
+        .orderBy('curso').get().then((escolasDoc){
+
+      for(int i = 0; escolasDoc.docs.length > i;i++){
+        cursosLista.add(
+            CursoModelo(
+              idEscola: escolasDoc.docs[i]['idEscola'],
+              nomeEscola: escolasDoc.docs[i]['nomeEscola'],
+              idCurso: escolasDoc.docs[i].id,
+              nomeCurso: escolasDoc.docs[i]['curso'],
+            )
+        );
       }
-    }
-    setState(() {});
+      print(cursosLista.length);
+      if(cursosLista.isEmpty){
+        showSnackBar(context, 'Nenhum curso encontrado', Cores.erro);
+      }
+      setState(() {});
+    });
   }
 
   @override
@@ -159,7 +159,7 @@ class _TurmasTelaState extends State<TurmasTela> {
               color: Colors.white
           ),
           backgroundColor: Cores.corPrincipal,
-          title: TextoPadrao(texto: 'TURMAS',)
+          title: TextoPadrao(texto: 'CURSOS',)
       ),
       body: salvando?Center(
         child: Column(
@@ -194,7 +194,7 @@ class _TurmasTelaState extends State<TurmasTela> {
                             larguraContainer: 300,
                             onChanged: (valor){
                               escolaSelecionadaPesquisa = valor;
-                              carregarTurmas();
+                              carregarCurso();
                               setState(() {});
                             },
                           ),
@@ -205,7 +205,7 @@ class _TurmasTelaState extends State<TurmasTela> {
                           children: [
                             exibirCampos?Container(width: 350,):InputPadrao(
                               controller: pesquisar,
-                              titulo: 'Pesquisar pelo nome da turma',
+                              titulo: 'Pesquisar pelo nome do curso',
                               largura: 350,
                             ),
                             SizedBox(width: 20,),
@@ -228,10 +228,10 @@ class _TurmasTelaState extends State<TurmasTela> {
                           ],
                         ),
                         Container(
-                          height: turmasLista.length*100,
+                          height: cursosLista.length*100,
                           width: 500,
                           child: ListView.builder(
-                              itemCount: turmasLista.length,
+                              itemCount: cursosLista.length,
                               itemBuilder: (context,i){
                                 return Container(
                                   color: Colors.grey[200],
@@ -239,12 +239,12 @@ class _TurmasTelaState extends State<TurmasTela> {
                                   padding: EdgeInsets.symmetric(vertical: 10,horizontal: 30),
                                   child: ListTile(
                                     title: TextoPadrao(
-                                      texto: turmasLista[i].nomeTurma,
+                                      texto: cursosLista[i].nomeCurso,
                                       corTexto: Cores.corPrincipal,
                                       textAling: TextAlign.start,
                                     ),
                                     onTap: (){
-                                      preencherCampos(turmasLista[i]);
+                                      preencherCampos(cursosLista[i]);
                                     },
                                   ),
                                 );
@@ -257,7 +257,7 @@ class _TurmasTelaState extends State<TurmasTela> {
                               width: 350,
                               child: DropdownEscolas(
                                 selecionado: escolaSelecionadaCadastro,
-                                titulo: 'Escolas',
+                                titulo: 'Escolas *',
                                 lista: escolasLista,
                                 largura: 400,
                                 larguraContainer: 300,
@@ -268,12 +268,12 @@ class _TurmasTelaState extends State<TurmasTela> {
                               ),
                             ),
                             InputPadrao(
-                              titulo: 'Turma *',
+                              titulo: 'Curso *',
                               controller: nome,
                               largura: 350,
                             ),
                             BotaoPadrao(
-                              titulo: idTurma.isEmpty?'Salvar':'Alterar',
+                              titulo: idCurso.isEmpty?'Salvar':'Alterar',
                               funcao: (){
                                 verificarCampos();
                               },
@@ -288,7 +288,7 @@ class _TurmasTelaState extends State<TurmasTela> {
             )
           ],
         ),
-      )
+      ),
     );
   }
 }

@@ -341,7 +341,7 @@ class _ChamadasTelaState extends State<ChamadasTela> {
                 color: Colors.white
             ),
             backgroundColor: Cores.corPrincipal,
-            title: TextoPadrao(texto: 'CONTROLE DE CHAMADAS',)
+            title: TextoPadrao(texto: 'CHAMADAS',)
         ),
         body: Container(
           child: Column(

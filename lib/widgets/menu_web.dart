@@ -1,4 +1,5 @@
 import 'package:controle_chamada_quadritech/telas/chamadas_tela.dart';
+import 'package:controle_chamada_quadritech/telas/cursos_tela.dart';
 import 'package:controle_chamada_quadritech/telas/turmas_tela.dart';
 import 'package:controle_chamada_quadritech/widgets/logo_home.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +27,10 @@ class MenuWeb extends StatelessWidget {
             ItemMenu(
               texto: 'ESCOLAS',
               destino: EscolasTela(),
+            ),
+            ItemMenu(
+              texto: 'CURSOS',
+              destino: CursosTela(),
             ),
             ItemMenu(
               texto: 'TURMAS',
