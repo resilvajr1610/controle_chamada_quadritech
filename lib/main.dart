@@ -1,4 +1,5 @@
 import 'package:controle_chamada_quadritech/telas/cursos_tela.dart';
+import 'package:controle_chamada_quadritech/telas/disciplinas_tela.dart';
 import 'package:controle_chamada_quadritech/telas/login_tela.dart';
 import 'package:controle_chamada_quadritech/telas/turmas_tela.dart';
 import 'package:flutter/material.dart';
@@ -21,7 +22,7 @@ void main() async {
       scaffoldMessengerKey: scaffoldMessengerKey,
       debugShowCheckedModeBanner: false,
       title: 'Controle de Chamadas Quadritech',
-      home: LoginTela(),
+      home: DisciplinasTela(),
     )
   );
 }

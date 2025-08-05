@@ -102,19 +102,21 @@ class _ReconhecimentoTelaState extends State<ReconhecimentoTela> {
     FirebaseFirestore.instance.collection('disciplinas')
         .where('idEscola',isEqualTo: idEscola)
         .where('status',isNotEqualTo: 'inativo')
-        .orderBy('nomeDisciplina').get().then((escolasDoc){
+        .orderBy('nomeDisciplina').get().then((disciplinasDoc){
 
-      for(int i = 0; escolasDoc.docs.length > i;i++){
-       if(idDisciplinas.contains(escolasDoc.docs[i].id)){
+      for(int i = 0; disciplinasDoc.docs.length > i;i++){
+       if(idDisciplinas.contains(disciplinasDoc.docs[i].id)){
          disciplinasLista.add(
              DisciplinaModelo(
-               idEscola: escolasDoc.docs[i]['idEscola'],
-               nomeEscola: escolasDoc.docs[i]['nomeEscola'],
-               idDisciplina: escolasDoc.docs[i].id,
-               nomeDisciplina: escolasDoc.docs[i]['nomeDisciplina'],
-               curso: escolasDoc.docs[i]['curso'],
-               ano: escolasDoc.docs[i]['ano'],
-               ensino: escolasDoc.docs[i]['ensino'],
+               idEscola: disciplinasDoc.docs[i]['idEscola'],
+               nomeEscola: disciplinasDoc.docs[i]['nomeEscola'],
+               idDisciplina: disciplinasDoc.docs[i].id,
+               nomeDisciplina: disciplinasDoc.docs[i]['nomeDisciplina'],
+               idCurso: disciplinasDoc.docs[i]['idCurso'],
+               nomeCurso: disciplinasDoc.docs[i]['nomeCurso'],
+               idTurma: disciplinasDoc.docs[i]['idTurma'],
+               nomeTurma: disciplinasDoc.docs[i]['nomeTurma'],
+               ano: disciplinasDoc.docs[i]['ano'],
              )
          );
        }

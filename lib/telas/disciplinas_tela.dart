@@ -1,9 +1,13 @@
 import 'package:controle_chamada_quadritech/modelo/disciplina_modelo.dart';
 import 'package:controle_chamada_quadritech/modelo/escola_modelo.dart';
+import 'package:controle_chamada_quadritech/modelo/turma_modelo.dart';
+import 'package:controle_chamada_quadritech/widgets/dropdown_cursos.dart';
 import 'package:controle_chamada_quadritech/widgets/dropdown_escolas.dart';
+import 'package:controle_chamada_quadritech/widgets/dropdown_turmas.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../modelo/cores.dart';
+import '../modelo/curso_modelo.dart';
 import '../widgets/botao_padrao.dart';
 import '../widgets/input_padrao.dart';
 import '../widgets/menu_web.dart';
@@ -21,16 +25,20 @@ class DisciplinasTela extends StatefulWidget {
 class _DisciplinasTelaState extends State<DisciplinasTela> {
 
   TextEditingController nome = TextEditingController();
-  TextEditingController ensino = TextEditingController();
-  TextEditingController curso = TextEditingController();
   TextEditingController ano = TextEditingController();
   TextEditingController pesquisar = TextEditingController();
   bool salvando = false;
   bool exibirCampos = false;
-  List<DisciplinaModelo> disciplinasLista = [];
   List<EscolaModelo> escolasLista = [];
+  List<CursoModelo> cursosLista = [];
+  List<DisciplinaModelo> disciplinasLista = [];
+  List<TurmaModelo> turmasLista = [];
   EscolaModelo? escolaSelecionadaPesquisa;
   EscolaModelo? escolaSelecionadaCadastro;
+  CursoModelo? cursoSelecionadoPesquisa;
+  CursoModelo? cursoSelecionadoCadastro;
+  TurmaModelo? turmaSelecionadaPesquisa;
+  TurmaModelo? turmaSelecionadaCadastro;
 
   String idDisciplina = '';
 
@@ -59,27 +67,88 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
     });
   }
 
-  carregarDisciplinas(){
-    disciplinasLista.clear();
-    FirebaseFirestore.instance.collection('disciplinas')
-        .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
-        .where('status',isNotEqualTo: 'inativo')
-        .orderBy('nomeDisciplina').get().then((escolasDoc){
+  carregarCurso(EscolaModelo escolaSelecionada){
+    turmasLista.clear();
+    cursosLista.clear();
+    cursoSelecionadoPesquisa = null;
+    cursoSelecionadoCadastro = null;
+    turmaSelecionadaCadastro = null;
+    turmaSelecionadaPesquisa = null;
 
-      for(int i = 0; escolasDoc.docs.length > i;i++){
-        disciplinasLista.add(
-            DisciplinaModelo(
-              idEscola: escolasDoc.docs[i]['idEscola'],
-              nomeEscola: escolasDoc.docs[i]['nomeEscola'],
-              idDisciplina: escolasDoc.docs[i].id,
-              nomeDisciplina: escolasDoc.docs[i]['nomeDisciplina'],
-              curso: escolasDoc.docs[i]['curso'],
-              ano: escolasDoc.docs[i]['ano'],
-              ensino: escolasDoc.docs[i]['ensino'],
+    FirebaseFirestore.instance.collection('cursos')
+        .where('nomeEscola',isEqualTo: escolaSelecionada!.nome)
+        .where('status',isNotEqualTo: 'inativo')
+        .orderBy('curso').get().then((cursosDoc){
+
+      for(int i = 0; cursosDoc.docs.length > i;i++){
+        cursosLista.add(
+            CursoModelo(
+              idEscola: cursosDoc.docs[i]['idEscola'],
+              nomeEscola: cursosDoc.docs[i]['nomeEscola'],
+              idCurso: cursosDoc.docs[i].id,
+              nomeCurso: cursosDoc.docs[i]['curso'],
             )
         );
       }
-      print(disciplinasLista.length);
+      print(cursosLista.length);
+      if(cursosLista.isEmpty){
+        showSnackBar(context, 'Nenhum curso encontrado', Cores.erro);
+      }
+      setState(() {});
+    });
+  }
+
+  carregarTurmas(CursoModelo cursoSelecionado){
+    turmasLista.clear();
+    FirebaseFirestore.instance.collection('turmas')
+        .where('idEscola',isEqualTo: cursoSelecionado!.idEscola)
+        .where('idCurso',isEqualTo: cursoSelecionado!.idCurso)
+        .where('status',isNotEqualTo: 'inativo')
+        .orderBy('turma').get().then((turmasDoc){
+
+      for(int i = 0; turmasDoc.docs.length > i;i++){
+        turmasLista.add(
+            TurmaModelo(
+              idEscola: turmasDoc.docs[i]['idEscola'],
+              nomeEscola: turmasDoc.docs[i]['nomeEscola'],
+              idCurso: turmasDoc.docs[i]['idCurso'],
+              nomeCurso: turmasDoc.docs[i]['nomeCurso'],
+              idTurma: turmasDoc.docs[i]['idTurma'],
+              nomeTurma: turmasDoc.docs[i]['turma'],
+            )
+        );
+      }
+      if(turmasLista.isEmpty){
+        showSnackBar(context, 'Nenhuma turma encontrada', Cores.erro);
+      }
+      setState(() {});
+    });
+  }
+
+  carregarDisciplinas(TurmaModelo turmaSelecionada){
+    disciplinasLista.clear();
+    FirebaseFirestore.instance.collection('disciplinas')
+        .where('idEscola',isEqualTo: turmaSelecionada!.idEscola)
+        .where('idCurso',isEqualTo: turmaSelecionada!.idCurso)
+        .where('idTurma',isEqualTo: turmaSelecionada!.idTurma)
+        .where('status',isNotEqualTo: 'inativo')
+        .orderBy('nomeDisciplina').get().then((disciplinasDoc){
+
+      for(int i = 0; disciplinasDoc.docs.length > i;i++){
+        disciplinasLista.add(
+            DisciplinaModelo(
+              idEscola: disciplinasDoc.docs[i]['idEscola'],
+              nomeEscola: disciplinasDoc.docs[i]['nomeEscola'],
+              idCurso: disciplinasDoc.docs[i]['idCurso'],
+              nomeCurso: disciplinasDoc.docs[i]['nomeCurso'],
+              idTurma: disciplinasDoc.docs[i]['idTurma'],
+              nomeTurma: disciplinasDoc.docs[i]['nomeTurma'],
+              idDisciplina: disciplinasDoc.docs[i].id,
+              nomeDisciplina: disciplinasDoc.docs[i]['nomeDisciplina'],
+              ano: disciplinasDoc.docs[i]['ano'],
+            )
+        );
+      }
       if(disciplinasLista.isEmpty){
         showSnackBar(context, 'Nenhuma disciplina encontrada', Cores.erro);
       }
@@ -89,22 +158,22 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
 
   verificarCampos(){
     if(escolaSelecionadaCadastro!=null){
-      if(nome.text.length>2){
-        if(curso.text.length>2){
-          if(ano.text.length==4){
-            if(ensino.text.length>2){
+      if(cursoSelecionadoCadastro!=null){
+        if(turmaSelecionadaCadastro!=null){
+          if(nome.text.length>2){
+            if(ano.text.length==4){
               idDisciplina.isEmpty?salvarDisciplina():editarDisciplina();
             }else{
-              showSnackBar(context, 'Ensino Incompleto', Cores.erro);
+              showSnackBar(context, 'Ano Incompleto', Cores.erro);
             }
           }else{
-            showSnackBar(context, 'Ano Incompleto', Cores.erro);
+            showSnackBar(context, 'Nome Incompleto', Cores.erro);
           }
         }else{
-          showSnackBar(context, 'Curso Incompleto', Cores.erro);
+          showSnackBar(context, 'Selecione uma Turma', Cores.erro);
         }
       }else{
-        showSnackBar(context, 'Nome Incompleto', Cores.erro);
+        showSnackBar(context, 'Selecione um Curso', Cores.erro);
       }
     }else{
       showSnackBar(context, 'Selecione uma escola', Cores.erro);
@@ -121,16 +190,18 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
       'idDisciplina'  : docRef.id,
       'nomeDisciplina': nome.text.toUpperCase(),
-      'curso'         : curso.text.toUpperCase(),
+      'idCurso'       : cursoSelecionadoCadastro!.idCurso,
+      'nomeCurso'     : cursoSelecionadoCadastro!.nomeCurso,
+      'idTurma'       : turmaSelecionadaCadastro!.idTurma,
+      'nomeTurma'     : turmaSelecionadaCadastro!.nomeTurma,
       'ano'           : int.parse(ano.text),
-      'ensino'        : ensino.text.toUpperCase(),
-      'status'          : 'ativo'
+      'status'        : 'ativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
+      cursoSelecionadoCadastro = null;
+      turmaSelecionadaCadastro = null;
       nome.clear();
-      curso.clear();
       ano.clear();
-      ensino.clear();
       salvando = false;
       setState(() {});
       showSnackBar(context, 'Salvo com sucesso', Colors.green);
@@ -145,15 +216,17 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
       'nomeDisciplina': nome.text.toUpperCase(),
-      'curso'         : curso.text.toUpperCase(),
+      'idCurso'       : cursoSelecionadoCadastro!.idCurso,
+      'nomeCurso'     : cursoSelecionadoCadastro!.nomeCurso,
+      'idTurma'       : turmaSelecionadaCadastro!.idTurma,
+      'nomeTurma'     : turmaSelecionadaCadastro!.nomeTurma,
       'ano'           : int.parse(ano.text),
-      'ensino'        : ensino.text.toUpperCase(),
     }).then((_){
       escolaSelecionadaCadastro = null;
+      cursoSelecionadoCadastro = null;
+      turmaSelecionadaCadastro = null;
       nome.clear();
-      curso.clear();
       ano.clear();
-      ensino.clear();
       salvando = false;
       idDisciplina = '';
       setState(() {});
@@ -164,51 +237,52 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
   pesquisarDisciplina(){
     disciplinasLista.clear();
     exibirCampos = false;
-    if(pesquisar.text.length>2){
-     if(escolaSelecionadaPesquisa!=null){
-       FirebaseFirestore.instance.collection('disciplinas')
-        .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
+    FirebaseFirestore.instance.collection('disciplinas')
+        .where('idEscola',isEqualTo: escolaSelecionadaPesquisa!.idEscola)
+        .where('idCurso',isEqualTo: cursoSelecionadoPesquisa!.idCurso)
+        .where('idTurma',isEqualTo: turmaSelecionadaPesquisa!.idTurma)
         .where('status',isNotEqualTo: 'inativo')
         .orderBy('nomeDisciplina')
         .startAt([pesquisar.text.toUpperCase()])
-        .endAt(['${pesquisar.text.toUpperCase()}\uf8ff']).get().then((escolasDoc){
+        .endAt(['${pesquisar.text.toUpperCase()}\uf8ff']).get().then((disciplinasDoc){
 
-         for(int i = 0; escolasDoc.docs.length > i;i++){
-           disciplinasLista.add(
-               DisciplinaModelo(
-                 idEscola: escolasDoc.docs[i]['idEscola'],
-                 nomeEscola: escolasDoc.docs[i]['nomeEscola'],
-                 idDisciplina: escolasDoc.docs[i].id,
-                 nomeDisciplina: escolasDoc.docs[i]['nomeDisciplina'],
-                 curso: escolasDoc.docs[i]['curso'],
-                 ano: escolasDoc.docs[i]['ano'],
-                 ensino: escolasDoc.docs[i]['ensino'],
-               )
-           );
-         }
-         print(disciplinasLista.length);
-         if(disciplinasLista.isEmpty){
-           carregarDisciplinas();
-           showSnackBar(context, 'Nenhuma disciplina encontrada', Cores.erro);
-         }
-         setState(() {});
-       });
-     }else{
-       showSnackBar(context, 'Selecione uma escola para pesquisar', Cores.erro);
-     }
-    }else{
-      showSnackBar(context, 'Digite pelo menos 3 caracteres para pesquisar', Cores.erro);
-    }
+      for(int i = 0; disciplinasDoc.docs.length > i;i++){
+        disciplinasLista.add(
+            DisciplinaModelo(
+              idEscola: disciplinasDoc.docs[i]['idEscola'],
+              nomeEscola: disciplinasDoc.docs[i]['nomeEscola'],
+              idDisciplina: disciplinasDoc.docs[i].id,
+              nomeDisciplina: disciplinasDoc.docs[i]['nomeDisciplina'],
+              idCurso: disciplinasDoc.docs[i]['idCurso'],
+              nomeCurso: disciplinasDoc.docs[i]['nomeCurso'],
+              idTurma: disciplinasDoc.docs[i]['idTurma'],
+              nomeTurma: disciplinasDoc.docs[i]['nomeTurma'],
+              ano: disciplinasDoc.docs[i]['ano'],
+            )
+        );
+      }
+      print('displinas selecionadas: ${disciplinasLista.length}');
+      if(disciplinasLista.isEmpty){
+        showSnackBar(context, 'Nenhuma disciplina encontrada', Cores.erro);
+      }
+      setState(() {});
+    });
     setState(() {});
   }
 
   preencherCampos(DisciplinaModelo disciplina){
     idDisciplina = disciplina.idDisciplina;
     nome.text = disciplina.nomeDisciplina;
-    ensino.text = disciplina.ensino;
-    curso.text = disciplina.curso;
     ano.text = disciplina.ano.toString();
     exibirCampos = true;
+    cursoSelecionadoCadastro = cursosLista.firstWhere(
+          (curso) => curso.idCurso == disciplina.idCurso,
+      orElse: () => null!, // cuidado para tratar esse caso
+    );
+    turmaSelecionadaCadastro = turmasLista.firstWhere(
+          (turma) => turma.idTurma == disciplina.idTurma,
+      orElse: () => null!, // cuidado para tratar esse caso
+    );
     for(int i = 0; escolasLista.length>i; i++){
       if(disciplina.idEscola == escolasLista[i].idEscola){
         escolaSelecionadaCadastro = escolasLista[i];
@@ -258,11 +332,11 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
         .update({
       'status' : 'inativo'
     }).then((_){
-      nome.clear();
-      curso.clear();
-      ensino.clear();
-      ano.clear();
       escolaSelecionadaCadastro = null;
+      cursoSelecionadoCadastro = null;
+      turmaSelecionadaCadastro = null;
+      nome.clear();
+      ano.clear();
       salvando = false;
       idDisciplina = '';
       Navigator.pop(context);
@@ -281,7 +355,6 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
   Widget build(BuildContext context) {
 
     double altura = MediaQuery.of(context).size.height;
-    double largura = MediaQuery.of(context).size.width;
 
     return Scaffold(
         appBar: AppBar(
@@ -324,7 +397,43 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
                               larguraContainer: 300,
                               onChanged: (valor){
                                 escolaSelecionadaPesquisa = valor;
-                                carregarDisciplinas();
+                                cursoSelecionadoPesquisa = null;
+                                turmaSelecionadaPesquisa = null;
+                                disciplinasLista.clear();
+                                carregarCurso(escolaSelecionadaPesquisa!);
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                          exibirCampos?Container(width: 350):Container(
+                            width: 350,
+                            child: DropdownCursos(
+                              selecionado: cursoSelecionadoPesquisa,
+                              titulo: 'Cursos',
+                              lista: cursosLista,
+                              largura: 400,
+                              larguraContainer: 300,
+                              onChanged: (valor){
+                                cursoSelecionadoPesquisa = valor;
+                                turmaSelecionadaPesquisa = null;
+                                disciplinasLista.clear();
+                                carregarTurmas(cursoSelecionadoPesquisa!);
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                          exibirCampos?Container(width: 350):Container(
+                            width: 350,
+                            child: DropdownTurmas(
+                              selecionado: turmaSelecionadaPesquisa,
+                              titulo: 'Turmas',
+                              lista: turmasLista,
+                              largura: 400,
+                              larguraContainer: 300,
+                              onChanged: (valor){
+                                turmaSelecionadaPesquisa = valor;
+                                disciplinasLista.clear();
+                                carregarDisciplinas(turmaSelecionadaPesquisa!);
                                 setState(() {});
                               },
                             ),
@@ -343,7 +452,23 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
                                   titulo: 'Pesquisar',
                                   largura: 120,
                                   funcao: (){
-                                    pesquisarDisciplina();
+                                    if(escolaSelecionadaPesquisa!=null){
+                                      if(cursoSelecionadoPesquisa!=null){
+                                        if(turmaSelecionadaPesquisa!=null){
+                                          if(pesquisar.text.isNotEmpty){
+                                            pesquisarDisciplina();
+                                          }else{
+                                            showSnackBar(context, 'Escreva o nome da disciplina', Colors.red);
+                                          }
+                                        }else{
+                                          showSnackBar(context, 'Selecione uma turma', Colors.red);
+                                        }
+                                      }else{
+                                        showSnackBar(context, 'Selecione um curso', Colors.red);
+                                      }
+                                    }else{
+                                      showSnackBar(context, 'Selecione uma escola', Colors.red);
+                                    }
                                   }
                               ),
                               SizedBox(width: 20,),
@@ -355,9 +480,9 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
                                     disciplinasLista.clear();
                                     ano.clear();
                                     nome.clear();
-                                    curso.clear();
-                                    ensino.clear();
                                     escolaSelecionadaCadastro = null;
+                                    cursoSelecionadoCadastro = null;
+                                    turmaSelecionadaCadastro = null;
                                     idDisciplina = '';
                                     exibirCampos = !exibirCampos;
                                     setState(() {});
@@ -408,6 +533,39 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
                               larguraContainer: 300,
                               onChanged: (valor){
                                 escolaSelecionadaCadastro = valor;
+                                carregarCurso(escolaSelecionadaCadastro!);
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                          Container(
+                            width: 450,
+                            child: DropdownCursos(
+                              selecionado: cursoSelecionadoCadastro,
+                              titulo: 'Curso *',
+                              hint: 'Selecione um curso',
+                              lista: cursosLista,
+                              largura: 500,
+                              larguraContainer: 300,
+                              onChanged: (valor){
+                                cursoSelecionadoCadastro = valor;
+                                turmaSelecionadaCadastro = null;
+                                carregarTurmas(cursoSelecionadoCadastro!);
+                                setState(() {});
+                              },
+                            ),
+                          ),
+                          Container(
+                            width: 450,
+                            child: DropdownTurmas(
+                              selecionado: turmaSelecionadaCadastro,
+                              titulo: 'Turma *',
+                              hint: 'Selecione uma turma',
+                              lista: turmasLista,
+                              largura: 500,
+                              larguraContainer: 300,
+                              onChanged: (valor){
+                                turmaSelecionadaCadastro = valor;
                                 setState(() {});
                               },
                             ),
@@ -423,14 +581,9 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 InputPadrao(
-                                  titulo: 'Curso *',
-                                  controller: curso,
-                                  largura: 215,
-                                ),
-                                InputPadrao(
                                   titulo: 'Ano *',
                                   controller: ano,
-                                  largura: 215,
+                                  largura: 450,
                                   textInputType: TextInputType.number,
                                   maximoCaracteres: 4,
                                   inputFormatters: [
@@ -439,11 +592,6 @@ class _DisciplinasTelaState extends State<DisciplinasTela> {
                                 ),
                               ],
                             ),
-                          ),
-                          InputPadrao(
-                            titulo: 'Ensino *',
-                            controller: ensino,
-                            largura: 450,
                           ),
                           BotaoPadrao(
                             titulo: idDisciplina.isEmpty?'Salvar':'Alterar',
