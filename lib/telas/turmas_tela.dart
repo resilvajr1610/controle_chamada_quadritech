@@ -1,7 +1,9 @@
 import 'package:controle_chamada_quadritech/modelo/turma_modelo.dart';
+import 'package:controle_chamada_quadritech/widgets/dropdown_cursos.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../modelo/cores.dart';
+import '../modelo/curso_modelo.dart';
 import '../modelo/escola_modelo.dart';
 import '../widgets/botao_padrao.dart';
 import '../widgets/dropdown_escolas.dart';
@@ -23,10 +25,13 @@ class _TurmasTelaState extends State<TurmasTela> {
   bool exibirCampos = false;
   EscolaModelo? escolaSelecionadaPesquisa;
   EscolaModelo? escolaSelecionadaCadastro;
+  CursoModelo? cursoSelecionadoPesquisa;
+  CursoModelo? cursoSelecionadoCadastro;
   List<EscolaModelo> escolasLista = [];
+  List<CursoModelo> cursosLista = [];
+  List<TurmaModelo> turmasLista = [];
   TextEditingController pesquisar = TextEditingController();
   TextEditingController nome = TextEditingController();
-  List<TurmaModelo> turmasLista = [];
   String idTurma = '';
 
   carregarEscolas(){
@@ -54,20 +59,50 @@ class _TurmasTelaState extends State<TurmasTela> {
     });
   }
 
-  carregarTurmas(){
+  carregarCurso(EscolaModelo escolaSelecionada){
+    cursosLista.clear();
+    cursoSelecionadoPesquisa = null;
+    cursoSelecionadoCadastro = null;
+    FirebaseFirestore.instance.collection('cursos')
+        .where('nomeEscola',isEqualTo: escolaSelecionada!.nome)
+        .where('status',isNotEqualTo: 'inativo')
+        .orderBy('curso').get().then((cursosDoc){
+
+      for(int i = 0; cursosDoc.docs.length > i;i++){
+        cursosLista.add(
+            CursoModelo(
+              idEscola: cursosDoc.docs[i]['idEscola'],
+              nomeEscola: cursosDoc.docs[i]['nomeEscola'],
+              idCurso: cursosDoc.docs[i].id,
+              nomeCurso: cursosDoc.docs[i]['curso'],
+            )
+        );
+      }
+      print(cursosLista.length);
+      if(cursosLista.isEmpty){
+        showSnackBar(context, 'Nenhum curso encontrado', Cores.erro);
+      }
+      setState(() {});
+    });
+  }
+
+  carregarTurmas(EscolaModelo escolaSelecionada, CursoModelo cursoSelecionado){
     turmasLista.clear();
     FirebaseFirestore.instance.collection('turmas')
-        .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
+        .where('idEscola',isEqualTo: escolaSelecionada!.idEscola)
+        .where('idCurso',isEqualTo: cursoSelecionado!.idCurso)
         .where('status',isNotEqualTo: 'inativo')
-        .orderBy('turma').get().then((escolasDoc){
+        .orderBy('turma').get().then((turmasDoc){
 
-      for(int i = 0; escolasDoc.docs.length > i;i++){
+      for(int i = 0; turmasDoc.docs.length > i;i++){
         turmasLista.add(
             TurmaModelo(
-              idEscola: escolasDoc.docs[i]['idEscola'],
-              nomeEscola: escolasDoc.docs[i]['nomeEscola'],
-              idTurma: escolasDoc.docs[i].id,
-              nomeTurma: escolasDoc.docs[i]['turma'],
+              idEscola: turmasDoc.docs[i]['idEscola'],
+              nomeEscola: turmasDoc.docs[i]['nomeEscola'],
+              idCurso: turmasDoc.docs[i]['idCurso'],
+              nomeCurso: turmasDoc.docs[i]['nomeCurso'],
+              idTurma: turmasDoc.docs[i].id,
+              nomeTurma: turmasDoc.docs[i]['turma'],
             )
         );
       }
@@ -82,7 +117,11 @@ class _TurmasTelaState extends State<TurmasTela> {
   verificarCampos(){
     if(escolaSelecionadaCadastro!=null){
       if(nome.text.isNotEmpty){
-        idTurma.isEmpty?salvarTurma():editarTurma();
+        if(cursoSelecionadoCadastro!=null){
+          idTurma.isEmpty?salvarTurma():editarTurma();
+        }else{
+          showSnackBar(context, 'Selecione um curso', Cores.erro);
+        }
       }else{
         showSnackBar(context, 'Nome Incompleto', Cores.erro);
       }
@@ -97,17 +136,18 @@ class _TurmasTelaState extends State<TurmasTela> {
 
     final docRef = FirebaseFirestore.instance.collection('turmas').doc();
     FirebaseFirestore.instance.collection('turmas').doc(docRef.id).set({
-      'idEscola'      : escolaSelecionadaCadastro!.idEscola,
-      'nomeEscola'    : escolaSelecionadaCadastro!.nome,
-      'idTurma'  : docRef.id,
-      'turma': nome.text.toUpperCase(),
-      'status'          : 'ativo'
+      'idEscola'    : escolaSelecionadaCadastro!.idEscola,
+      'nomeEscola'  : escolaSelecionadaCadastro!.nome,
+      'idCurso'     : cursoSelecionadoCadastro!.idCurso,
+      'nomeCurso'   : cursoSelecionadoCadastro!.nomeCurso,
+      'idTurma'     : docRef.id,
+      'turma'       : nome.text.toUpperCase(),
+      'status'      : 'ativo'
     }).then((_){
       escolaSelecionadaCadastro = null;
       nome.clear();
       salvando = false;
       setState(() {});
-      carregarTurmas();
       showSnackBar(context, 'Salvo com sucesso', Colors.green);
     });
   }
@@ -133,6 +173,12 @@ class _TurmasTelaState extends State<TurmasTela> {
     idTurma = turma.idTurma;
     nome.text = turma.nomeTurma;
     exibirCampos = true;
+    cursoSelecionadoCadastro = cursosLista.firstWhere(
+          (curso) => curso.idCurso == turma.idCurso,
+      orElse: () => null!, // cuidado para tratar esse caso
+    );
+
+
     for(int i = 0; escolasLista.length>i; i++){
       if(turma.idEscola == escolasLista[i].idEscola){
         escolaSelecionadaCadastro = escolasLista[i];
@@ -140,6 +186,38 @@ class _TurmasTelaState extends State<TurmasTela> {
       }
     }
     setState(() {});
+  }
+
+  pesquisarTurma()async{
+
+    String termo = pesquisar.text.toUpperCase().trim();
+    turmasLista.clear();
+    await FirebaseFirestore.instance
+        .collection('turmas')
+        .where('idEscola',isEqualTo: escolaSelecionadaPesquisa!.idEscola)
+        .where('idCurso',isEqualTo: cursoSelecionadoPesquisa!.idCurso)
+        .where('status', isNotEqualTo: 'inativo')
+        .orderBy('turma')
+        .startAt([termo])
+        .endAt(['$termo\uf8ff'])
+        .get().then((turmasDoc){
+      for(int i = 0; turmasDoc.docs.length > i;i++){
+        turmasLista.add(
+            TurmaModelo(
+              idEscola: turmasDoc.docs[i]['idEscola'],
+              nomeEscola: turmasDoc.docs[i]['nomeEscola'],
+              idCurso: turmasDoc.docs[i]['idCurso'],
+              nomeCurso: turmasDoc.docs[i]['nomeCurso'],
+              idTurma: turmasDoc.docs[i].id,
+              nomeTurma: turmasDoc.docs[i]['turma'],
+            )
+        );
+      }
+      if(turmasLista.isEmpty){
+        showSnackBar(context, 'Nenhuma turma encontrada', Cores.erro);
+      }
+      setState(() {});
+    });
   }
 
   @override
@@ -186,7 +264,7 @@ class _TurmasTelaState extends State<TurmasTela> {
                       children: [
                         Container(
                           width: 350,
-                          child: DropdownEscolas(
+                          child: exibirCampos?Container():DropdownEscolas(
                             selecionado: escolaSelecionadaPesquisa,
                             titulo: 'Escolas',
                             lista: escolasLista,
@@ -194,7 +272,22 @@ class _TurmasTelaState extends State<TurmasTela> {
                             larguraContainer: 300,
                             onChanged: (valor){
                               escolaSelecionadaPesquisa = valor;
-                              carregarTurmas();
+                              carregarCurso(escolaSelecionadaPesquisa!);
+                              setState(() {});
+                            },
+                          ),
+                        ),
+                        Container(
+                          width: 350,
+                          child: exibirCampos?Container():DropdownCursos(
+                            selecionado: cursoSelecionadoPesquisa,
+                            titulo: 'Cursos',
+                            lista: cursosLista,
+                            largura: 400,
+                            larguraContainer: 300,
+                            onChanged: (valor){
+                              cursoSelecionadoPesquisa = valor;
+                              carregarTurmas(escolaSelecionadaPesquisa!,cursoSelecionadoPesquisa!);
                               setState(() {});
                             },
                           ),
@@ -213,6 +306,19 @@ class _TurmasTelaState extends State<TurmasTela> {
                                 titulo: 'Pesquisar',
                                 largura: 120,
                                 funcao: (){
+                                  if(escolaSelecionadaPesquisa!=null){
+                                    if(cursoSelecionadoPesquisa!=null){
+                                      if(pesquisar.text.isNotEmpty){
+                                        pesquisarTurma();
+                                      }else{
+                                        showSnackBar(context, 'Digite a turma', Colors.red);
+                                      }
+                                    }else{
+                                      showSnackBar(context, 'Selecione de qual curso é a turma', Colors.red);
+                                    }
+                                  }else{
+                                    showSnackBar(context, 'Selecione de qual escola é a turma', Colors.red);
+                                  }
                                 }
                             ),
                             SizedBox(width: 20,),
@@ -221,6 +327,10 @@ class _TurmasTelaState extends State<TurmasTela> {
                                 largura: 50,
                                 funcao: (){
                                   pesquisar.clear();
+                                  turmasLista.clear();
+                                  cursosLista.clear();
+                                  escolaSelecionadaPesquisa = null;
+                                  cursoSelecionadoPesquisa = null;
                                   exibirCampos = !exibirCampos;
                                   setState(() {});
                                 }
@@ -257,12 +367,27 @@ class _TurmasTelaState extends State<TurmasTela> {
                               width: 350,
                               child: DropdownEscolas(
                                 selecionado: escolaSelecionadaCadastro,
-                                titulo: 'Escolas',
+                                titulo: 'Escolas *',
                                 lista: escolasLista,
                                 largura: 400,
                                 larguraContainer: 300,
                                 onChanged: (valor){
                                   escolaSelecionadaCadastro = valor;
+                                  carregarCurso(escolaSelecionadaCadastro!);
+                                  setState(() {});
+                                },
+                              ),
+                            ),
+                            Container(
+                              width: 350,
+                              child: DropdownCursos(
+                                selecionado: cursoSelecionadoCadastro,
+                                titulo: 'Cursos *',
+                                lista: cursosLista,
+                                largura: 400,
+                                larguraContainer: 300,
+                                onChanged: (valor){
+                                  cursoSelecionadoCadastro = valor;
                                   setState(() {});
                                 },
                               ),

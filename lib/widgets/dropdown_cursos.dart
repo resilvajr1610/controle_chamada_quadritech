@@ -1,19 +1,19 @@
 import 'package:controle_chamada_quadritech/modelo/cores.dart';
-import 'package:controle_chamada_quadritech/modelo/escola_modelo.dart';
+import 'package:controle_chamada_quadritech/modelo/curso_modelo.dart';
 import 'package:controle_chamada_quadritech/widgets/texto_padrao.dart';
 import 'package:flutter/material.dart';
 
-class DropdownEscolas extends StatelessWidget {
+class DropdownCursos extends StatelessWidget {
   var onChanged;
-  EscolaModelo? selecionado;
+  CursoModelo? selecionado;
   String titulo;
   double tamanhoFonte;
-  List<EscolaModelo> lista;
+  List<CursoModelo> lista;
   double largura;
   double larguraContainer;
   String hint;
 
-  DropdownEscolas({
+  DropdownCursos({
     required this.onChanged,
     required this.selecionado,
     required this.titulo,
@@ -53,7 +53,7 @@ class DropdownEscolas extends StatelessWidget {
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 0.0),
                       child: TextoPadrao(
-                        texto: value.nome,
+                        texto: value.nomeCurso,
                         tamanhoTexto: tamanhoFonte,
                         corTexto: Colors.black,
                         textAling: TextAlign.start,

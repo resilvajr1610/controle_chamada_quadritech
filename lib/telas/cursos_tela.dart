@@ -124,18 +124,49 @@ class _CursosTelaState extends State<CursosTela> {
     FirebaseFirestore.instance.collection('cursos')
         .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
         .where('status',isNotEqualTo: 'inativo')
-        .orderBy('curso').get().then((escolasDoc){
+        .orderBy('curso').get().then((cursosDoc){
 
-      for(int i = 0; escolasDoc.docs.length > i;i++){
+      for(int i = 0; cursosDoc.docs.length > i;i++){
         cursosLista.add(
             CursoModelo(
-              idEscola: escolasDoc.docs[i]['idEscola'],
-              nomeEscola: escolasDoc.docs[i]['nomeEscola'],
-              idCurso: escolasDoc.docs[i].id,
-              nomeCurso: escolasDoc.docs[i]['curso'],
+              idEscola: cursosDoc.docs[i]['idEscola'],
+              nomeEscola: cursosDoc.docs[i]['nomeEscola'],
+              idCurso: cursosDoc.docs[i].id,
+              nomeCurso: cursosDoc.docs[i]['curso'],
             )
         );
       }
+      print(cursosLista.length);
+      if(cursosLista.isEmpty){
+        showSnackBar(context, 'Nenhum curso encontrado', Cores.erro);
+      }
+      setState(() {});
+    });
+  }
+
+  pesquisarCurso()async{
+
+    String termo = pesquisar.text.toUpperCase().trim();
+    cursosLista.clear();
+    await FirebaseFirestore.instance
+        .collection('cursos')
+        .where('nomeEscola',isEqualTo: escolaSelecionadaPesquisa!.nome)
+        .where('status', isNotEqualTo: 'inativo')
+        .orderBy('curso')
+        .startAt([termo])
+        .endAt(['$termo\uf8ff'])
+        .get().then((cursosDoc){
+      for(int i = 0; cursosDoc.docs.length > i;i++){
+        cursosLista.add(
+            CursoModelo(
+              idEscola: cursosDoc.docs[i]['idEscola'],
+              nomeEscola: cursosDoc.docs[i]['nomeEscola'],
+              idCurso: cursosDoc.docs[i].id,
+              nomeCurso: cursosDoc.docs[i]['curso'],
+            )
+        );
+      }
+      print('pesquisa');
       print(cursosLista.length);
       if(cursosLista.isEmpty){
         showSnackBar(context, 'Nenhum curso encontrado', Cores.erro);
@@ -215,6 +246,15 @@ class _CursosTelaState extends State<CursosTela> {
                                 titulo: 'Pesquisar',
                                 largura: 120,
                                 funcao: (){
+                                  if(escolaSelecionadaPesquisa!=null){
+                                    if(pesquisar.text.isNotEmpty){
+                                      pesquisarCurso();
+                                    }else{
+                                      showSnackBar(context, 'Digite o curso', Colors.red);
+                                    }
+                                  }else{
+                                    showSnackBar(context, 'Selecione de qual escola é o curso', Colors.red);
+                                  }
                                 }
                             ),
                             SizedBox(width: 20,),
