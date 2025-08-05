@@ -55,6 +55,8 @@ class _CursosTelaState extends State<CursosTela> {
   }
 
   preencherCampos(CursoModelo curso){
+    cursosLista.clear();
+    escolaSelecionadaPesquisa = null;
     idCurso = curso.idCurso;
     nome.text = curso.nomeCurso;
     exibirCampos = true;
@@ -220,7 +222,9 @@ class _CursosTelaState extends State<CursosTela> {
                                 titulo: exibirCampos?'x':'+',
                                 largura: 50,
                                 funcao: (){
-                                  pesquisar.clear();
+                                  pesquisar.clear();  
+                                  cursosLista.clear();
+                                  escolaSelecionadaPesquisa = null;
                                   exibirCampos = !exibirCampos;
                                   setState(() {});
                                 }
