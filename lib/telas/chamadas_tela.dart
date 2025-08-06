@@ -301,6 +301,7 @@ class _ChamadasTelaState extends State<ChamadasTela> {
         .where('status',isNotEqualTo: 'inativo')
         .orderBy('nomeDisciplina').get().then((disciplinasDoc){
 
+      disciplinasLista.clear();
       for(int i = 0; disciplinasDoc.docs.length > i;i++){
         if(idDisciplinas.contains(disciplinasDoc.docs[i].id)){
           disciplinasLista.add(
@@ -386,6 +387,7 @@ class _ChamadasTelaState extends State<ChamadasTela> {
                               onChanged: (valor){
                                 professorSelecionado = valor;
                                 alunoSelecionado = null;
+                                disciplinaSelecionada = null;
                                 calendario.clear();
                                 buscarDisciplinas(professorSelecionado!.idEscola, professorSelecionado!.idDisciplinas);
                                 setState(() {});

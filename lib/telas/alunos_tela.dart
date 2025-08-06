@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:controle_chamada_quadritech/modelo/aluno_modelo.dart';
-import 'package:controle_chamada_quadritech/modelo/disciplina_modelo.dart';
+import 'package:controle_chamada_quadritech/modelo/curso_multipla_modelo.dart';
+import 'package:controle_chamada_quadritech/modelo/turma_multipla_modelo.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -15,7 +16,6 @@ import '../widgets/input_padrao.dart';
 import '../widgets/menu_web.dart';
 import '../widgets/snackbar.dart';
 import '../widgets/texto_padrao.dart';
-import 'package:brasil_fields/brasil_fields.dart';
 import 'dart:html' as html;
 import 'package:multi_select_flutter/multi_select_flutter.dart';
 
@@ -34,26 +34,18 @@ class _AlunosTelaState extends State<AlunosTela> {
   EscolaModelo? escolaSelecionadaCadastro;
   List<EscolaModelo> escolasLista = [];
   List<AlunoModelo> alunosLista = [];
-  List<DisciplinaMultiplaListaModelo> disciplinasBanco = [];
+  List<CursoMultiplaListaModelo> cursosBanco = [];
+  List<TurmaMultiplaListaModelo> turmasBanco = [];
   TextEditingController nome = TextEditingController();
-  TextEditingController ensino = TextEditingController();
-  TextEditingController curso = TextEditingController();
-  TextEditingController ano = TextEditingController();
-  TextEditingController endereco = TextEditingController();
-  TextEditingController numero = TextEditingController();
-  TextEditingController bairro = TextEditingController();
-  TextEditingController cidade = TextEditingController();
-  TextEditingController idade = TextEditingController();
-  TextEditingController cep = TextEditingController();
-  TextEditingController sexo = TextEditingController();
   TextEditingController numeroRegistro = TextEditingController();
-  TextEditingController estadoCivil = TextEditingController();
   TextEditingController pesquisar = TextEditingController();
   String idAluno = '';
   Uint8List? imagemweb;
   String urlImagem = '';
-  List<MultiSelectItem> disciplinaMultiple = [];
-  List disciplinasSelecionadas = [];
+  List<MultiSelectItem> cursosMultiple = [];
+  List<MultiSelectItem> turmasMultiple = [];
+  List cursosSelecionados = [];
+  List turmasSelecionadas = [];
 
   carregarEscolas(){
     FirebaseFirestore.instance.collection('escolas')
@@ -80,65 +72,82 @@ class _AlunosTelaState extends State<AlunosTela> {
     });
   }
 
+  carregarCursos(EscolaModelo escolaSelecionada){
+    cursosMultiple.clear();
+    List cursos = [];
+
+    FirebaseFirestore.instance.collection('cursos')
+        .where('idEscola',isEqualTo: escolaSelecionada!.idEscola)
+        .where('status',isNotEqualTo: 'inativo')
+        .orderBy('curso').get().then((cursosDoc){
+
+      for(int i = 0; cursosDoc.docs.length > i;i++){
+        cursos.add( cursosDoc.docs[i]['curso']);
+        cursosBanco.add(
+            CursoMultiplaListaModelo(
+              idEscola: cursosDoc.docs[i]['idEscola'],
+              nomeEscola: cursosDoc.docs[i]['nomeEscola'],
+              idCurso: cursosDoc.docs[i].id,
+              nomeCurso: cursosDoc.docs[i]['curso'],
+            )
+        );
+      }
+      cursosMultiple =cursos.map((e) => MultiSelectItem(e, e.toString())).toList();
+      if(cursosBanco.isEmpty){
+        showSnackBar(context, 'Nenhum curso encontrado', Cores.erro);
+      }
+      setState(() {});
+    });
+  }
+  carregarTurmas(EscolaModelo escolaSelecionada){
+    turmasMultiple.clear();
+    List turmas = [];
+
+    FirebaseFirestore.instance.collection('turmas')
+        .where('idEscola',isEqualTo: escolaSelecionada!.idEscola)
+        .where('status',isNotEqualTo: 'inativo')
+        .orderBy('turma').get().then((turmasDoc){
+
+      for(int i = 0; turmasDoc.docs.length > i;i++){
+        turmas.add( turmasDoc.docs[i]['turma']);
+        turmasBanco.add(
+            TurmaMultiplaListaModelo(
+              idEscola: turmasDoc.docs[i]['idEscola'],
+              nomeEscola: turmasDoc.docs[i]['nomeEscola'],
+              idCurso: turmasDoc.docs[i]['idCurso'],
+              nomeCurso: turmasDoc.docs[i]['nomeCurso'],
+              idTurma: turmasDoc.docs[i]['idTurma'],
+              nomeTurma: turmasDoc.docs[i]['turma'],
+            )
+        );
+      }
+      turmasMultiple = turmas.map((e) => MultiSelectItem(e, e.toString())).toList();
+      if(turmasBanco.isEmpty){
+        showSnackBar(context, 'Nenhuma turma encontrada', Cores.erro);
+      }
+      setState(() {});
+    });
+  }
+
   verificarCampos(){
     if(escolaSelecionadaCadastro!=null){
         if(nome.text.length>5){
-          if(curso.text.length>2){
-            if(ano.text.length==4){
-              if(ensino.text.length>2){
-                  if(endereco.text.length>2){
-                    if(numero.text.isNotEmpty){
-                      if(bairro.text.length>2){
-                        if(cidade.text.length>2){
-                          if(cep.text.length==10){
-                            if(estadoCivil.text.length>2){
-                              if(idade.text.isNotEmpty){
-                                if(sexo.text.length>2){
-                                  if(disciplinasSelecionadas.isNotEmpty){
-                                    if(imagemweb!=null || urlImagem.isNotEmpty){
-                                      if(imagemweb!=null){
-                                        salvarFoto();
-                                      }else{
-                                        idAluno.isEmpty?salvarAluno():editarAluno();
-                                      }
-                                    }else{
-                                      showSnackBar(context, 'Selecione uma foto do rosto do aluno(a) para avançar', Colors.red);
-                                    }
-                                  }else{
-                                    showSnackBar(context, 'Selecione uma disciplina para avançar', Colors.red);
-                                  }
-                                }else{
-                                  showSnackBar(context, 'Sexo Incompleto', Cores.erro);
-                                }
-                              }else{
-                                showSnackBar(context, 'Idade Incompleta', Cores.erro);
-                              }
-                            }else{
-                              showSnackBar(context, 'Estado Cívil Incompleto', Cores.erro);
-                            }
-                          }else{
-                            showSnackBar(context, 'CEP Incompleto', Cores.erro);
-                          }
-                        }else{
-                          showSnackBar(context, 'Cidade Incompleta', Cores.erro);
-                        }
-                      }else{
-                        showSnackBar(context, 'Bairro Incompleto', Cores.erro);
-                      }
-                    }else{
-                      showSnackBar(context, 'Número Incompleto', Cores.erro);
-                    }
-                  }else{
-                    showSnackBar(context, 'Endereço Incompleto', Cores.erro);
-                  }
+          if(cursosSelecionados.isNotEmpty){
+            if(turmasSelecionadas.isNotEmpty){
+              if(imagemweb!=null || urlImagem.isNotEmpty){
+                if(imagemweb!=null){
+                  salvarFoto();
+                }else{
+                  idAluno.isEmpty?salvarAluno():editarAluno();
+                }
               }else{
-                showSnackBar(context, 'Ensino Incompleto', Cores.erro);
+                showSnackBar(context, 'Selecione uma foto do rosto do aluno(a) para avançar', Colors.red);
               }
             }else{
-              showSnackBar(context, 'Ano Incompleto', Cores.erro);
+              showSnackBar(context, 'Selecione uma turma para avançar', Colors.red);
             }
           }else{
-            showSnackBar(context, 'Curso Incompleto', Cores.erro);
+            showSnackBar(context, 'Selecione um curso para avançar', Colors.red);
           }
         }else{
           showSnackBar(context, 'Nome Incompleto', Cores.erro);
@@ -151,11 +160,17 @@ class _AlunosTelaState extends State<AlunosTela> {
   salvarAluno(){
     salvando = true;
     setState(() {});
-    List idDisciplinas = [];
+    List idCursos = [];
+    List idTurmas = [];
 
-    for(int i =0; disciplinasBanco.length>i;i++){
-      if(disciplinasSelecionadas.contains(disciplinasBanco[i].nomeDisciplina)){
-        idDisciplinas.add(disciplinasBanco[i].idDisciplina);
+    for(int i =0; cursosBanco.length>i;i++){
+      if(cursosSelecionados.contains(cursosBanco[i].nomeCurso)){
+        idCursos.add(cursosBanco[i].idCurso);
+      }
+    }
+    for(int i =0; turmasBanco.length>i;i++){
+      if(turmasSelecionadas.contains(turmasBanco[i].nomeTurma)){
+        idTurmas.add(turmasBanco[i].idTurma);
       }
     }
 
@@ -165,39 +180,20 @@ class _AlunosTelaState extends State<AlunosTela> {
       'nomeAluno'     : nome.text.toUpperCase(),
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
-      'idDisciplinas' : idDisciplinas,
-      'bairro'        : bairro.text.toUpperCase(),
-      'cep'           : cep.text,
-      'cidade'        : cidade.text.toUpperCase(),
-      'idade'         : int.parse(idade.text),
-      'endereco'      : endereco.text.toUpperCase(),
-      'numero'        : int.parse(numero.text),
+      'idCursos'      : idCursos,
+      'idTurmas'      : idTurmas,
       'numeroRegistro': numeroRegistro.text,
-      'curso'         : curso.text.toUpperCase(),
-      'ano'           : int.parse(ano.text),
-      'ensino'        : ensino.text.toUpperCase(),
-      'estadoCivil'   : estadoCivil.text.toUpperCase(),
-      'sexo'          : sexo.text.toUpperCase(),
       'urlImagem'     : urlImagem,
       'status'        : 'ativo',
     }).then((_){
       escolaSelecionadaCadastro = null;
       nome.clear();
-      curso.clear();
-      bairro.clear();
-      cep.clear();
-      cidade.clear();
-      idade.clear();
-      endereco.clear();
-      numero.clear();
       numeroRegistro.clear();
-      estadoCivil.clear();
-      ano.clear();
-      ensino.clear();
       urlImagem = '';
       imagemweb = null;
       salvando = false;
-      disciplinasSelecionadas.clear();
+      cursosSelecionados.clear();
+      turmasSelecionadas.clear();
       exibirCampos = false;
       setState(() {});
       showSnackBar(context, 'Salvo com sucesso', Colors.green);
@@ -207,53 +203,40 @@ class _AlunosTelaState extends State<AlunosTela> {
   editarAluno(){
     salvando = true;
     setState(() {});
-    List idDisciplinas = [];
-    for(int i =0; disciplinasBanco.length>i;i++){
-      if(disciplinasSelecionadas.contains(disciplinasBanco[i].nomeDisciplina)){
-        idDisciplinas.add(disciplinasBanco[i].idDisciplina);
+    List idCursos = [];
+    List idTurmas = [];
+    for(int i =0; cursosBanco.length>i;i++){
+      if(cursosSelecionados.contains(cursosBanco[i].nomeCurso)){
+        idCursos.add(cursosBanco[i].idCurso);
       }
     }
-    List aux = idDisciplinas.toSet().toList();
-    idDisciplinas = aux;
+
+    for(int i =0; turmasBanco.length>i;i++){
+      if(turmasSelecionadas.contains(turmasBanco[i].nomeTurma)){
+        idTurmas.add(turmasBanco[i].idTurma);
+      }
+    }
+    List aux = idCursos.toSet().toList();
+    idCursos = aux;
 
     FirebaseFirestore.instance.collection('alunos').doc(idAluno).update({
       'nomeAluno'     : nome.text.toUpperCase(),
       'idEscola'      : escolaSelecionadaCadastro!.idEscola,
       'nomeEscola'    : escolaSelecionadaCadastro!.nome,
-      'idDisciplinas' : idDisciplinas,
-      'bairro'        : bairro.text.toUpperCase(),
-      'cep'           : cep.text,
-      'cidade'        : cidade.text.toUpperCase(),
-      'idade'         : int.parse(idade.text),
-      'endereco'      : endereco.text.toUpperCase(),
-      'numero'        : int.parse(numero.text),
+      'idCursos' : idCursos,
+      'idTurmas'      : idTurmas,
       'numeroRegistro': numeroRegistro.text,
-      'curso'         : curso.text.toUpperCase(),
-      'ano'           : int.parse(ano.text),
-      'ensino'        : ensino.text.toUpperCase(),
-      'estadoCivil'   : estadoCivil.text.toUpperCase(),
-      'sexo'          : sexo.text.toUpperCase(),
       'urlImagem'     : urlImagem,
     }).then((_){
       escolaSelecionadaCadastro = null;
       escolaSelecionadaPesquisa = null;
       pesquisar.clear();
       nome.clear();
-      curso.clear();
-      bairro.clear();
-      cep.clear();
-      cidade.clear();
-      idade.clear();
-      endereco.clear();
-      numero.clear();
       numeroRegistro.clear();
-      estadoCivil.clear();
-      ano.clear();
-      ensino.clear();
       urlImagem = '';
       imagemweb = null;
       salvando = false;
-      disciplinasSelecionadas.clear();
+      cursosSelecionados.clear();
       exibirCampos = false;
       idAluno = '';
       setState(() {});
@@ -297,20 +280,10 @@ class _AlunosTelaState extends State<AlunosTela> {
               nomeEscola: doc['nomeEscola'],
               idAluno: doc.id,
               nomeAluno: doc['nomeAluno'],
-              cep: doc['cep'],
-              cidade: doc['cidade'],
-              bairro: doc['bairro'],
-              numero: doc['numero'],
-              endereco: doc['endereco'],
               numeroRegistro: doc['numeroRegistro'],
-              estadoCivil: doc['estadoCivil'],
-              idade: doc['idade'],
-              curso: doc['curso'],
-              ano: doc['ano'],
-              ensino: doc['ensino'],
-              sexo: doc['sexo'],
-              idDisciplinas: data.containsKey('idDisciplinas') ? data['idDisciplinas'] : [],
               urlImagem: data.containsKey('urlImagem') ? data['urlImagem'] : '',
+              idCursos: data.containsKey('idCursos') ? data['idCursos'] : [],
+              idTurmas: data.containsKey('idTurmas') ? data['idTurmas'] : [],
             )
           );
         }
@@ -333,20 +306,10 @@ class _AlunosTelaState extends State<AlunosTela> {
   preencherCampos(AlunoModelo aluno){
     idAluno = aluno.idAluno;
     nome.text = aluno.nomeAluno;
-    bairro.text = aluno.bairro;
-    cep.text = aluno.cep;
-    cidade.text = aluno.cidade;
-    endereco.text = aluno.endereco;
-    numero.text = aluno.numero.toString();
     numeroRegistro.text = aluno.numeroRegistro;
-    estadoCivil.text = aluno.estadoCivil;
-    idade.text = aluno.idade.toString();
-    ensino.text = aluno.ensino;
-    curso.text = aluno.curso;
-    sexo.text = aluno.sexo;
-    ano.text = aluno.ano.toString();
     urlImagem = aluno.urlImagem;
-    List idsDisciplinas = aluno.idDisciplinas;
+    List idsCursos = aluno.idCursos;
+    List idsTurmas = aluno.idTurmas;
 
     exibirCampos = true;
     alunosLista.clear();
@@ -356,15 +319,24 @@ class _AlunosTelaState extends State<AlunosTela> {
         break;
       }
     }
-    for (var disciplina in disciplinasBanco) {
-      for (var id in idsDisciplinas) {
-        if (disciplina.idDisciplina == id) {
-          disciplinasSelecionadas.add(disciplina.nomeDisciplina);
+    for (var curso in cursosBanco) {
+      for (var id in idsCursos) {
+        if (curso.idCurso == id) {
+          cursosSelecionados.add(curso.nomeCurso);
         }
       }
     }
-    List aux = disciplinasSelecionadas.toSet().toList();
-    disciplinasSelecionadas = aux;
+    for (var turma in turmasBanco) {
+      for (var id in idsTurmas) {
+        if (turma.idTurma == id) {
+          turmasSelecionadas.add(turma.nomeTurma);
+        }
+      }
+    }
+    List auxCurso = cursosSelecionados.toSet().toList();
+    cursosSelecionados = auxCurso;
+    List auxTurma = turmasSelecionadas.toSet().toList();
+    turmasSelecionadas = auxTurma;
     setState(() {});
   }
 
@@ -410,17 +382,6 @@ class _AlunosTelaState extends State<AlunosTela> {
     }).then((_){
       escolaSelecionadaCadastro = null;
       nome.clear();
-      estadoCivil.clear();
-      idade.clear();
-      curso.clear();
-      ano.clear();
-      endereco.clear();
-      numero.clear();
-      bairro.clear();
-      cidade.clear();
-      ensino.clear();
-      sexo.clear();
-      cep.clear();
       numeroRegistro.clear();
       salvando = false;
       idAluno = '';
@@ -452,21 +413,23 @@ class _AlunosTelaState extends State<AlunosTela> {
     uploadInput.remove();
   }
 
-  carregarDisciplinasEscola(String idEscola){
-    FirebaseFirestore.instance.collection('disciplinas').where('idEscola',isEqualTo: idEscola).get().then((disciplinasDoc) {
-      List disciplinas = [];
-      disciplinasDoc.docs.forEach((doc) {
-        disciplinas.add(doc['nomeDisciplina']);
-        disciplinasBanco.add(
-            DisciplinaMultiplaListaModelo(
+  carregarAlunos(){
+    FirebaseFirestore.instance.collection('alunos').where('idEscola',isEqualTo: escolaSelecionadaPesquisa!.idEscola).get().then((alunosDoc) {
+      alunosDoc.docs.forEach((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        alunosLista.add(
+            AlunoModelo(
               idEscola: doc['idEscola'],
               nomeEscola: doc['nomeEscola'],
-              idDisciplina: doc.id,
-              nomeDisciplina: doc['nomeDisciplina'],
+              idAluno: doc.id,
+              nomeAluno: doc['nomeAluno'],
+              numeroRegistro: doc['numeroRegistro'],
+              urlImagem: data.containsKey('urlImagem') ? data['urlImagem'] : '',
+              idCursos: data.containsKey('idCursos') ? data['idCursos'] : [],
+              idTurmas: data.containsKey('idTurmas') ? data['idTurmas'] : [],
             )
         );
       });
-      disciplinaMultiple =disciplinas.map((e) => MultiSelectItem(e, e.toString())).toList();
       setState(() {});
     });
   }
@@ -546,7 +509,9 @@ class _AlunosTelaState extends State<AlunosTela> {
                               onChanged: (valor){
                                 escolaSelecionadaPesquisa = valor;
                                 pesquisar.clear();
-                                carregarDisciplinasEscola(escolaSelecionadaPesquisa!.idEscola);
+                                carregarAlunos();
+                                carregarCursos(escolaSelecionadaPesquisa!);
+                                carregarTurmas(escolaSelecionadaPesquisa!);
                                 setState(() {});
                               },
                             ),
@@ -577,21 +542,11 @@ class _AlunosTelaState extends State<AlunosTela> {
                                     escolaSelecionadaPesquisa = null;
                                     escolaSelecionadaCadastro = null;
                                     nome.clear();
-                                    estadoCivil.clear();
-                                    idade.clear();
-                                    curso.clear();
-                                    ano.clear();
-                                    ensino.clear();
-                                    sexo.clear();
-                                    endereco.clear();
-                                    numero.clear();
-                                    bairro.clear();
-                                    cidade.clear();
-                                    cep.clear();
                                     numeroRegistro.clear();
                                     imagemweb = null;
                                     urlImagem = '';
-                                    disciplinasSelecionadas.clear();
+                                    cursosSelecionados.clear();
+                                    turmasSelecionadas.clear();
                                     exibirCampos = !exibirCampos;
                                     setState(() {});
                                   }
@@ -658,25 +613,26 @@ class _AlunosTelaState extends State<AlunosTela> {
                               larguraContainer: 400,
                               onChanged: (valor){
                                 escolaSelecionadaCadastro = valor;
-                                carregarDisciplinasEscola(escolaSelecionadaCadastro!.idEscola);
+                                carregarCursos(escolaSelecionadaCadastro!);
+                                carregarTurmas(escolaSelecionadaCadastro!);
                                 setState(() {});
                               },
                             ),
                           ),
-                          disciplinaMultiple.isEmpty?Container():Container(
-                            height: disciplinasSelecionadas.isEmpty?80:130,
+                          cursosMultiple.isEmpty?Container():Container(
+                            height: cursosSelecionados.isEmpty?80:130,
                             width: 485,
                             alignment:Alignment.bottomCenter,
                             child: ListView(
                               children: [
                                 Container(
                                   alignment: Alignment.bottomLeft,
-                                  child: TextoPadrao(texto: 'Disciplinas *',tamanhoTexto: 18,corTexto: Cores.corPrincipal,)
+                                  child: TextoPadrao(texto: 'Cursos *',tamanhoTexto: 18,corTexto: Cores.corPrincipal,)
                                 ),
                                 MultiSelectDialogField(
-                                  items: disciplinaMultiple,
-                                  initialValue: disciplinasSelecionadas,
-                                  title: Text("Disciplinas",style: TextStyle(color: Cores.corPrincipal),),
+                                  items: cursosMultiple,
+                                  initialValue: cursosSelecionados,
+                                  title: Text("Cursos",style: TextStyle(color: Cores.corPrincipal),),
                                   selectedColor: Cores.corPrincipal,
                                   dialogHeight: altura*0.5,
                                   decoration: BoxDecoration(
@@ -688,15 +644,55 @@ class _AlunosTelaState extends State<AlunosTela> {
                                     ),
                                   ),
                                   buttonText: Text(
-                                    "Selecione a(s) disciplina(s)",
+                                    "Selecione o(s) cursos(s)",
                                     style: TextStyle(
                                       color: Colors.black,
                                       fontSize: 16,
                                     ),
                                   ),
                                   onConfirm: (results) {
-                                    disciplinasSelecionadas.clear();
-                                    disciplinasSelecionadas = results;
+                                    cursosSelecionados.clear();
+                                    cursosSelecionados = results;
+                                    setState(() {});
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          turmasMultiple.isEmpty?Container():Container(
+                            height: turmasSelecionadas.isEmpty?80:130,
+                            width: 485,
+                            alignment:Alignment.bottomCenter,
+                            child: ListView(
+                              children: [
+                                Container(
+                                  alignment: Alignment.bottomLeft,
+                                  child: TextoPadrao(texto: 'Turmas *',tamanhoTexto: 18,corTexto: Cores.corPrincipal,)
+                                ),
+                                MultiSelectDialogField(
+                                  items: turmasMultiple,
+                                  initialValue: turmasSelecionadas,
+                                  title: Text("Turmas",style: TextStyle(color: Cores.corPrincipal),),
+                                  selectedColor: Cores.corPrincipal,
+                                  dialogHeight: altura*0.5,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.all(Radius.circular(10)),
+                                    border: Border.all(
+                                      color: Colors.grey.withOpacity(0.0),
+                                      width: 0,
+                                    ),
+                                  ),
+                                  buttonText: Text(
+                                    "Selecione a(s) turma(s)",
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  onConfirm: (results) {
+                                    turmasSelecionadas.clear();
+                                    turmasSelecionadas = results;
                                     setState(() {});
                                   },
                                 ),
@@ -708,133 +704,10 @@ class _AlunosTelaState extends State<AlunosTela> {
                             controller: nome,
                             largura: 485,
                           ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Estado Cívil *',
-                                  controller: estadoCivil,
-                                  largura: 230,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Idade *',
-                                  controller: idade,
-                                  largura: 230,
-                                  textInputType: TextInputType.number,
-                                  maximoCaracteres: 2,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Curso *',
-                                  controller: curso,
-                                  largura: 230,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Ano *',
-                                  controller: ano,
-                                  largura: 230,
-                                  textInputType: TextInputType.number,
-                                  maximoCaracteres: 4,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Ensino *',
-                                  controller: ensino,
-                                  largura: 230,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Sexo *',
-                                  controller: sexo,
-                                  largura: 230,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 490,
-                            child:
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Endereço *',
-                                  controller: endereco,
-                                  largura: 370,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Número *',
-                                  controller: numero,
-                                  largura: 100,
-                                  textInputType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'Bairro *',
-                                  controller: bairro,
-                                  largura: 230,
-                                ),
-                                InputPadrao(
-                                  titulo: 'Cidade *',
-                                  controller: cidade,
-                                  largura: 230,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            width: 485,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InputPadrao(
-                                  titulo: 'CEP *',
-                                  controller: cep,
-                                  largura: 230,
-                                  textInputType: TextInputType.number,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    CepInputFormatter()
-                                  ],
-                                ),
-                                InputPadrao(
-                                  titulo: 'Número Registro',
-                                  controller: numeroRegistro,
-                                  largura: 230,
-                                ),
-                              ],
-                            ),
+                          InputPadrao(
+                            titulo: 'Número Registro',
+                            controller: numeroRegistro,
+                            largura: 485,
                           ),
                           BotaoPadrao(
                             titulo: idAluno.isEmpty?'Salvar':'Alterar',
